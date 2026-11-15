@@ -23,6 +23,7 @@ class Sale extends Model
         'iva',
         'total',
         'estado',
+        'activo',
     ];
 
     protected function casts(): array
@@ -33,6 +34,7 @@ class Sale extends Model
             'descuento_total' => 'float',
             'iva' => 'float',
             'total' => 'float',
+            'activo' => 'boolean',
         ];
     }
 

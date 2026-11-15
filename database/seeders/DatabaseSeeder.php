@@ -82,16 +82,19 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 3. Convenios de Salud (Pantalla 3)
+        $inicioAnio = now()->startOfYear()->toDateString();
+        $finVigencia = now()->endOfYear()->addMonths(6)->toDateString();
+
         $conveniosData = [
-            ['nombre_convenio' => 'Sin convenio', 'porcentaje_descuento' => 0],
-            ['nombre_convenio' => 'Fonasa A', 'porcentaje_descuento' => 50],
-            ['nombre_convenio' => 'Fonasa B', 'porcentaje_descuento' => 80],
-            ['nombre_convenio' => 'Fonasa C', 'porcentaje_descuento' => 60],
-            ['nombre_convenio' => 'Fonasa D', 'porcentaje_descuento' => 40],
-            ['nombre_convenio' => 'GES / AUGE', 'porcentaje_descuento' => 80],
-            ['nombre_convenio' => 'Isapre Cruz Blanca', 'porcentaje_descuento' => 30],
-            ['nombre_convenio' => 'Isapre Banmédica', 'porcentaje_descuento' => 25],
-            ['nombre_convenio' => 'Isapre Colmena', 'porcentaje_descuento' => 20],
+            ['nombre_convenio' => 'Sin convenio', 'porcentaje_descuento' => 0, 'fecha_inicio' => null, 'fecha_fin' => null],
+            ['nombre_convenio' => 'Fonasa A', 'porcentaje_descuento' => 50, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'Fonasa B', 'porcentaje_descuento' => 80, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'Fonasa C', 'porcentaje_descuento' => 60, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'Fonasa D', 'porcentaje_descuento' => 40, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'GES / AUGE', 'porcentaje_descuento' => 80, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'Isapre Cruz Blanca', 'porcentaje_descuento' => 30, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'Isapre Banmédica', 'porcentaje_descuento' => 25, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
+            ['nombre_convenio' => 'Isapre Colmena', 'porcentaje_descuento' => 20, 'fecha_inicio' => $inicioAnio, 'fecha_fin' => $finVigencia],
         ];
 
         $conveniosMap = [];
@@ -223,6 +226,50 @@ class DatabaseSeeder extends Seeder
             'tipo_controlado' => false,
         ]);
 
+        // 4.1 Vademécum / Petitorio de Medicamentos Adheridos por Convenio (Farmacia Privada Real)
+        $medsCenabast = [
+            $medOmeprazol->id_medicamento => ['activo' => true],
+            $medParacetamol->id_medicamento => ['activo' => true],
+            $medAmoxicilina->id_medicamento => ['activo' => true],
+            $medLosartan->id_medicamento => ['activo' => true],
+            $medIbuprofeno->id_medicamento => ['activo' => true],
+            $medMetformina->id_medicamento => ['activo' => true],
+            $medAtorvastatina->id_medicamento => ['activo' => true],
+            $medAzitromicina->id_medicamento => ['activo' => true],
+        ];
+
+        $medsGes = [
+            $medOmeprazol->id_medicamento => ['activo' => true],
+            $medLosartan->id_medicamento => ['activo' => true],
+            $medMetformina->id_medicamento => ['activo' => true],
+            $medAtorvastatina->id_medicamento => ['activo' => true],
+        ];
+
+        $medsIsapre = [
+            $medTramadol->id_medicamento => ['activo' => true],
+            $medOmeprazol->id_medicamento => ['activo' => true],
+            $medClonazepam->id_medicamento => ['activo' => true],
+            $medLorazepam->id_medicamento => ['activo' => true],
+            $medAmoxicilina->id_medicamento => ['activo' => true],
+            $medLosartan->id_medicamento => ['activo' => true],
+            $medMetformina->id_medicamento => ['activo' => true],
+            $medAtorvastatina->id_medicamento => ['activo' => true],
+            $medAzitromicina->id_medicamento => ['activo' => true],
+        ];
+
+        foreach (['Fonasa A', 'Fonasa B', 'Fonasa C', 'Fonasa D'] as $nom) {
+            $conveniosMap[$nom]->update(['aplica_todo_catalogo' => false]);
+            $conveniosMap[$nom]->medicamentos()->sync($medsCenabast);
+        }
+
+        $conveniosMap['GES / AUGE']->update(['aplica_todo_catalogo' => false]);
+        $conveniosMap['GES / AUGE']->medicamentos()->sync($medsGes);
+
+        foreach (['Isapre Cruz Blanca', 'Isapre Banmédica', 'Isapre Colmena'] as $nom) {
+            $conveniosMap[$nom]->update(['aplica_todo_catalogo' => false]);
+            $conveniosMap[$nom]->medicamentos()->sync($medsIsapre);
+        }
+
         // Lotes en VITRINA exactamente como en Pantalla 5 (Página 29)
         $loteTramadol = Batch::create([
             'id_medicamento' => $medTramadol->id_medicamento,
@@ -332,6 +379,10 @@ class DatabaseSeeder extends Seeder
             'fecha_vencimiento' => now()->addDays(420)->toDateString(),
             'fecha_ingreso' => now()->subDays(5)->toDateString(),
         ]);
+
+        // 4.2 Catálogo ampliado de Farmacia Privada Chilena (77 especialidades farmacéuticas con lotes y vademécum)
+        $catalogMigration = require database_path('migrations/2026_11_15_000004_seed_complete_private_pharmacy_catalog.php');
+        $catalogMigration->up();
 
         // 5. Cola de Validaciones Pendientes en Bandeja Q.F. (Pantalla 4 - Página 28)
         IspLog::create([

@@ -21,6 +21,7 @@ class SaleDetail extends Model
         'cantidad',
         'precio_unitario',
         'subtotal_linea',
+        'activo',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class SaleDetail extends Model
             'cantidad' => 'integer',
             'precio_unitario' => 'float',
             'subtotal_linea' => 'float',
+            'activo' => 'boolean',
         ];
     }
 

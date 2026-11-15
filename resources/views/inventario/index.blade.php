@@ -1,16 +1,22 @@
 @extends('layouts.app')
 
-@section('title', 'Gestión de Inventario FEFO — FarmaNet Pro')
+@section('title', 'Gestión de Inventario — FarmaNet Pro')
 
 @section('content')
+@php
+    $canManageStock = auth()->user()->hasPermission('Can_Manage_Stock');
+    $canManageMedications = auth()->user()->hasPermission('Can_Manage_Medications');
+    $canToggleLote = $canManageStock || $canManageMedications || auth()->user()->role === 'administrador';
+@endphp
+
 <div class="space-y-5">
 
-    <!-- Cabecera Pantalla 5 (Página 29) -->
+    <!-- Cabecera -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario</h1>
+            <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario y Catálogo</h1>
             <p class="text-xs text-slate-500 mt-0.5">
-                Método FEFO — First Expired, First Out (Rotación automática por caducidad)
+                Control de lotes por vencimiento (FEFO), traspasos entre Vitrina y Bodega, y clasificación de recetas restringidas.
             </p>
         </div>
 
@@ -19,137 +25,714 @@
                 ⚠️ {{ $alertasFefo->count() }} lotes próx. a vencer
             </span>
 
-            @if(auth()->user()->hasPermission('Can_Manage_Stock'))
-                <button type="button" onclick="document.getElementById('modal-traspaso-fefo').classList.remove('hidden')"
-                        class="px-4 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
-                    + Traspaso Bodega &rarr; Vitrina
-                </button>
-                <button type="button" onclick="document.getElementById('modal-nueva-remesa').classList.remove('hidden')"
-                        class="px-4 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
-                    + Nueva Remesa
-                </button>
+            @if($ubicacion === 'CATALOGO')
+                @if($canManageMedications)
+                    <button type="button" onclick="document.getElementById('modal-nuevo-medicamento').classList.remove('hidden')"
+                            class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition">
+                        💊 + Nuevo Producto al Catálogo
+                    </button>
+                @endif
+            @else
+                @if($canToggleLote)
+                    <button type="button" onclick="document.getElementById('modal-retiro-vitrina').classList.remove('hidden')"
+                            class="px-3.5 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold shadow-sm transition">
+                        ↓ Retirar Vitrina &rarr; Bodega
+                    </button>
+                @endif
+
+                @if($canManageStock)
+                    <button type="button" onclick="document.getElementById('modal-traspaso-fefo').classList.remove('hidden')"
+                            class="px-3.5 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
+                        ↑ Traspaso Bodega &rarr; Vitrina
+                    </button>
+                    <button type="button" onclick="document.getElementById('modal-nueva-remesa').classList.remove('hidden')"
+                            class="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+                        📦 + Ingresar Lote (Stock)
+                    </button>
+                @endif
             @endif
         </div>
     </div>
 
-    <!-- Pestañas de Segregación Física: Vitrina / Bodega -->
-    <div class="flex items-center gap-2">
+    <!-- Pestañas de Segregación Física y Catálogo -->
+    <div class="flex flex-wrap items-center gap-2">
         <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
            class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'VITRINA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
             🏪 Vitrina
         </a>
         <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}"
            class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BODEGA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-            📦 Bodega Central
+            📦 Bodega
         </a>
         <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS']) }}"
            class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'TODOS' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
             📋 Todos los Lotes
         </a>
+        <a href="{{ route('inventario.index', ['ubicacion' => 'BAJAS']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BAJAS' ? 'bg-red-50 border-red-300 text-red-800 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            🗑️ Bajas y Caducados ({{ $bajasCount ?? 0 }})
+        </a>
+        <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'CATALOGO' ? 'bg-white border-blue-300 text-[#1E40AF] shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            💊 Catálogo y Recetas ({{ $medicamentosCatalogo->count() }})
+        </a>
     </div>
 
-    <!-- Banner Informativo FEFO -->
-    <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex items-center gap-2">
-        <span>⬇️</span>
-        <span>Lotes ordenados por <strong>FEFO</strong>: los primeros en expirar se muestran primero. Los marcados en rojo tienen menos de 20 días para vencer y los ámbar entre 20 y 30 días.</span>
-    </div>
-
-    <!-- Tabla Interactiva Clasificada por FEFO (Página 29) -->
-    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60">
-                        <th class="py-3.5 px-5">Medicamento</th>
-                        <th class="py-3.5 px-5">Código Lote</th>
-                        <th class="py-3.5 px-5">Laboratorio</th>
-                        <th class="py-3.5 px-5">Ubicación</th>
-                        <th class="py-3.5 px-5 text-center">Cantidad</th>
-                        <th class="py-3.5 px-5 text-center">Vencimiento</th>
-                        <th class="py-3.5 px-5 text-center">Alerta FEFO</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 text-xs">
-                    @foreach($lotes as $lote)
-                        @php
-                            $dias = $lote->dias_restantes;
-                            $sem = $lote->semaforo_fefo;
-                            $rowBg = match ($sem) {
-                                'vencido', 'critico' => 'bg-red-50/40 hover:bg-red-50/70',
-                                'alerta' => 'bg-amber-50/40 hover:bg-amber-50/70',
-                                default => 'hover:bg-slate-50/80',
-                            };
-                        @endphp
-                        <tr class="{{ $rowBg }} transition">
-                            <td class="py-3.5 px-5 font-medium text-slate-900 flex items-center gap-2">
-                                @if($sem === 'critico' || $sem === 'vencido')
-                                    <span class="w-2 h-2 rounded-full bg-[#EF4444]"></span>
-                                @elseif($sem === 'alerta')
-                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                @else
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                @endif
-                                <span>{{ $lote->medicamento?->nombre_comercial }}</span>
-                            </td>
-                            <td class="py-3.5 px-5 font-mono-code text-[11px] text-slate-500">
-                                <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                                    {{ $lote->lote_codigo }}
-                                </span>
-                            </td>
-                            <td class="py-3.5 px-5 text-slate-500">
-                                {{ $lote->medicamento?->laboratorio }}
-                            </td>
-                            <td class="py-3.5 px-5">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ $lote->ubicacion === 'VITRINA' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-300' }}">
-                                    {{ $lote->ubicacion }}
-                                </span>
-                            </td>
-                            <td class="py-3.5 px-5 text-center font-bold text-slate-900">
-                                {{ $lote->cantidad }}
-                            </td>
-                            <td class="py-3.5 px-5 text-center font-mono-code text-slate-600">
-                                {{ $lote->fecha_vencimiento?->format('d-m-Y') }}
-                            </td>
-                            <td class="py-3.5 px-5 text-center">
-                                @if($sem === 'critico' || $sem === 'vencido')
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-[#EF4444] border border-red-200">
-                                        ● {{ $dias }}d
-                                    </span>
-                                @elseif($sem === 'alerta')
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                                        ▲ {{ $dias }}d
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        ✓ {{ $dias }}d
-                                    </span>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+    @if($ubicacion === 'CATALOGO')
+        <!-- Vista de Catálogo de Medicamentos y Restricción de Receta -->
+        <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span>💊 Catálogo maestro de medicamentos y condición de venta.</span>
+            @if(! $canManageMedications)
+                <span class="px-2.5 py-1 rounded-lg bg-white/80 border border-blue-200 text-slate-600 font-semibold text-[11px]">
+                    🔒 Modo Consulta — Clasificación exclusiva Q. Farmacéutico y Administrador
+                </span>
+            @endif
         </div>
-    </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60 whitespace-nowrap">
+                            <th class="py-3.5 px-4">Código</th>
+                            <th class="py-3.5 px-4">Medicamento / Principio Activo</th>
+                            <th class="py-3.5 px-4">Laboratorio</th>
+                            <th class="py-3.5 px-4 text-right">Precio Venta</th>
+                            <th class="py-3.5 px-4 text-center">Stock (Vitrina / Bodega)</th>
+                            <th class="py-3.5 px-4 text-center">Condición Venta</th>
+                            <th class="py-3.5 px-4 text-center">Estado</th>
+                            @if($canManageMedications)
+                                <th class="py-3.5 px-4 text-right">Acciones</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">
+                        @foreach($medicamentosCatalogo as $med)
+                            @php
+                                $esRestringido = $med->requiere_receta || $med->tipo_controlado;
+                            @endphp
+                            <tr class="hover:bg-slate-50/80 {{ ! $med->activo ? 'bg-slate-50/60 opacity-70' : '' }}">
+                                <td class="py-3.5 px-4 font-mono-code text-[11px] text-slate-500 whitespace-nowrap">
+                                    {{ $med->codigo_barras }}
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <div class="font-bold {{ $med->activo ? 'text-slate-900' : 'text-slate-400 line-through' }}">
+                                        {{ $med->nombre_comercial }}
+                                    </div>
+                                    <div class="text-[11px] text-slate-400">{{ $med->principio_activo }}</div>
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                                    {{ $med->laboratorio }}
+                                </td>
+                                <td class="py-3.5 px-4 text-right font-mono-code font-bold text-slate-900 whitespace-nowrap">
+                                    ${{ number_format($med->precio_unitario, 0, ',', '.') }}
+                                </td>
+                                <td class="py-3.5 px-4 text-center font-mono-code text-[11px] whitespace-nowrap">
+                                    <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold">{{ $med->stock_vitrina }} vit.</span>
+                                    <span class="text-slate-300 mx-1">/</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">{{ $med->stock_bodega }} bod.</span>
+                                </td>
+                                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                    @if($esRestringido)
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 whitespace-nowrap">
+                                            🔒 Retenida ISP
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                                            ✓ Venta Libre
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $med->activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700' }}">
+                                        {{ $med->activo ? 'ACTIVO' : 'DESHABILITADO' }}
+                                    </span>
+                                </td>
+                                @if($canManageMedications)
+                                    <td class="py-3.5 px-5 text-right">
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            <button type="button"
+                                                    onclick="openEditMedicationModal({{ json_encode([
+                                                        'id_medicamento' => $med->id_medicamento,
+                                                        'nombre_comercial' => $med->nombre_comercial,
+                                                        'principio_activo' => $med->principio_activo,
+                                                        'laboratorio' => $med->laboratorio,
+                                                        'categoria' => $med->categoria,
+                                                        'precio_unitario' => $med->precio_unitario,
+                                                        'condicion_receta' => $esRestringido ? 'receta_retenida' : 'venta_libre',
+                                                        'activo' => $med->activo ? '1' : '0',
+                                                        'update_url' => route('inventario.medications.update', $med->id_medicamento),
+                                                    ]) }})"
+                                                    class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 text-[#1E40AF] font-bold text-[11px] transition">
+                                                Editar
+                                            </button>
+
+                                            <form action="{{ route('inventario.medications.toggle_prescription', $med->id_medicamento) }}" method="POST" class="inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                @if($esRestringido)
+                                                    <button type="submit"
+                                                            class="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition"
+                                                            title="Cambiar a Venta Directa sin bloqueo de receta">
+                                                        Pasar a Venta Libre
+                                                    </button>
+                                                @else
+                                                    <button type="submit"
+                                                            class="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-800 font-bold text-[11px] transition"
+                                                            title="Marcar con restricción de Receta Retenida ISP">
+                                                        Exigir Receta ISP
+                                                    </button>
+                                                @endif
+                                            </form>
+                                        </div>
+                                    </td>
+                                @endif
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @else
+        <!-- Banner Informativo FEFO / Bajas Sanitarias -->
+        @if($ubicacion === 'BAJAS')
+            <div class="p-3 rounded-xl bg-red-50/90 border border-red-200 text-red-900 text-xs font-medium flex items-center gap-2">
+                <span>🗑️</span>
+                <span><strong>Registro de Bajas y Productos Caducados:</strong> Lotes retirados de Vitrina y Bodega por vencimiento, merma o alerta sanitaria.</span>
+            </div>
+        @else
+            <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex items-center gap-2">
+                <span>⬇️</span>
+                <span>Lotes activos ordenados por fecha de vencimiento (FEFO): los primeros en expirar se muestran primero.</span>
+            </div>
+        @endif
+
+        <!-- Tabla Interactiva Clasificada por FEFO -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60 whitespace-nowrap">
+                            <th class="py-3.5 px-4">Medicamento</th>
+                            <th class="py-3.5 px-4">Condición Venta</th>
+                            <th class="py-3.5 px-4">Código Lote</th>
+                            <th class="py-3.5 px-4">Laboratorio</th>
+                            <th class="py-3.5 px-4">{{ $ubicacion === 'BAJAS' ? 'Origen / Motivo de Baja' : 'Ubicación' }}</th>
+                            <th class="py-3.5 px-4 text-center">Cantidad</th>
+                            <th class="py-3.5 px-4 text-center">Vencimiento</th>
+                            <th class="py-3.5 px-4 text-center">Alerta FEFO</th>
+                            <th class="py-3.5 px-4 text-center">Estado</th>
+                            @if($canToggleLote)
+                                <th class="py-3.5 px-4 text-right">Acciones</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">
+                        @forelse($lotes as $lote)
+                            @php
+                                $dias = $lote->dias_restantes;
+                                $sem = $lote->semaforo_fefo;
+                                $esControlado = $lote->medicamento?->requiere_receta || $lote->medicamento?->tipo_controlado;
+                                $rowBg = ! $lote->activo
+                                    ? 'bg-red-50/30 opacity-85'
+                                    : match ($sem) {
+                                        'vencido', 'critico' => 'bg-red-50/40 hover:bg-red-50/70',
+                                        'alerta' => 'bg-amber-50/40 hover:bg-amber-50/70',
+                                        default => 'hover:bg-slate-50/80',
+                                    };
+                            @endphp
+                            <tr class="{{ $rowBg }} transition">
+                                <td class="py-3.5 px-4 font-medium {{ $lote->activo ? 'text-slate-900' : 'text-slate-500 line-through' }} flex items-center gap-2">
+                                    @if(! $lote->activo)
+                                        <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+                                    @elseif($sem === 'critico' || $sem === 'vencido')
+                                        <span class="w-2 h-2 rounded-full bg-[#EF4444] shrink-0"></span>
+                                    @elseif($sem === 'alerta')
+                                        <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                                    @else
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                    @endif
+                                    <span>{{ $lote->medicamento?->nombre_comercial }}</span>
+                                </td>
+                                <td class="py-3.5 px-4 whitespace-nowrap">
+                                    @if($esControlado)
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 whitespace-nowrap"
+                                              title="Medicamento sujeto a Receta Retenida y autorización del Químico Farmacéutico">
+                                            🔒 Retenida
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 whitespace-nowrap">
+                                            Venta Libre
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4 font-mono-code text-[11px] text-slate-500 whitespace-nowrap">
+                                    <span class="inline-block px-2 py-0.5 rounded bg-slate-100 border border-slate-200 whitespace-nowrap">
+                                        {{ $lote->lote_codigo }}
+                                    </span>
+                                </td>
+                                <td class="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                                    {{ $lote->medicamento?->laboratorio }}
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ $lote->ubicacion === 'VITRINA' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-300' }}">
+                                        {{ $lote->ubicacion }}
+                                    </span>
+                                    @if(! $lote->activo && $lote->motivo_baja)
+                                        <div class="text-[10px] text-red-700 font-semibold mt-1">
+                                            {{ $lote->motivo_baja }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4 text-center font-bold text-slate-900 whitespace-nowrap">
+                                    {{ $lote->cantidad }}
+                                </td>
+                                <td class="py-3.5 px-4 text-center font-mono-code text-slate-600 whitespace-nowrap">
+                                    {{ $lote->fecha_vencimiento?->format('d-m-Y') }}
+                                </td>
+                                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                    @if($sem === 'critico' || $sem === 'vencido')
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-[#EF4444] border border-red-200 whitespace-nowrap">
+                                            ● {{ $dias }}d
+                                        </span>
+                                    @elseif($sem === 'alerta')
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">
+                                            ▲ {{ $dias }}d
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                                            ✓ {{ $dias }}d
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $lote->activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700' }}">
+                                        {{ $lote->activo ? 'DISPONIBLE' : 'DADO DE BAJA' }}
+                                    </span>
+                                </td>
+                                @if($canToggleLote)
+                                    <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            @if($lote->activo && $lote->ubicacion === 'VITRINA' && $lote->cantidad > 0)
+                                                <button type="button"
+                                                        onclick="openRetiroVitrinaModal({{ $lote->id_lote }}, {{ $lote->cantidad }})"
+                                                        class="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-[11px] transition"
+                                                        title="Devolver unidades o retirar este medicamento de Vitrina hacia Bodega">
+                                                    &darr; Pasar a Bodega
+                                                </button>
+                                            @elseif($lote->activo && $lote->ubicacion === 'BODEGA' && $canManageStock && $lote->dias_restantes > 0)
+                                                <button type="button"
+                                                        onclick="openTraspasoVitrinaModal({{ $lote->id_lote }}, {{ min(25, $lote->cantidad) }})"
+                                                        class="px-2.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E40AF] font-bold text-[11px] transition"
+                                                        title="Abastecer Vitrina desde este lote de Bodega">
+                                                    &uarr; Pasar a Vitrina
+                                                </button>
+                                            @endif
+
+                                            @if($lote->activo)
+                                                <button type="button"
+                                                        onclick="openBajaCaducidadModal({{ json_encode([
+                                                            'id_lote' => $lote->id_lote,
+                                                            'lote_codigo' => $lote->lote_codigo,
+                                                            'medicamento' => $lote->medicamento?->nombre_comercial,
+                                                            'ubicacion' => $lote->ubicacion,
+                                                            'cantidad' => $lote->cantidad,
+                                                            'dias' => $dias,
+                                                            'action_url' => route('inventario.toggle_batch', $lote->id_lote),
+                                                        ]) }})"
+                                                        class="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-bold text-[11px] transition"
+                                                        title="Retirar de {{ $lote->ubicacion }} por caducidad o merma sanitaria">
+                                                    {{ $dias <= 30 ? '🗑️ Quitar por Caducado' : '🗑️ Dar de Baja' }}
+                                                </button>
+                                            @else
+                                                <form action="{{ route('inventario.toggle_batch', $lote->id_lote) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit"
+                                                            class="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition">
+                                                        ↺ Restaurar a {{ $lote->ubicacion }}
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                @endif
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="{{ $canToggleLote ? 10 : 9 }}" class="py-10 text-center text-slate-400 text-xs">
+                                    @if($ubicacion === 'BAJAS')
+                                        No hay lotes dados de baja por caducidad o merma sanitaria en este momento.
+                                    @else
+                                        No hay lotes activos en {{ $ubicacion }}.
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
 </div>
 
-@if(auth()->user()->hasPermission('Can_Manage_Stock'))
-    <!-- Modal Traspaso Rápido Asistido Bodega -> Vitrina (Escenario B) -->
+@if($canManageMedications)
+    <!-- Modal Nuevo Medicamento (Adquisición al Catálogo + Condición de Receta) -->
+    <div id="modal-nuevo-medicamento" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-sm">+ Registrar Nuevo Medicamento</h3>
+                    <p class="text-[11px] text-slate-300">Incorpora un nuevo producto al catálogo de la farmacia</p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-nuevo-medicamento').classList.add('hidden')" class="text-white">✕</button>
+            </div>
+            <form action="{{ route('inventario.medications.store') }}" method="POST" class="p-5 space-y-3.5 text-xs">
+                @csrf
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
+                        <input type="text" name="nombre_comercial" required placeholder="Ej: Zolpidem 10mg"
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
+                        <input type="text" name="principio_activo" required placeholder="Ej: Zolpidem Tartrato"
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Código de Barras</label>
+                        <input type="text" name="codigo_barras" value="78000010{{ rand(1120, 9999) }}" required
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
+                        <input type="text" name="laboratorio" required placeholder="Ej: Laboratorio Saval"
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Precio Unitario ($)</label>
+                        <input type="number" name="precio_unitario" min="100" step="10" value="6990" required
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+                    <label class="block font-bold text-amber-950">Condición de Venta</label>
+                    <select name="condicion_receta" class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white font-semibold text-slate-800">
+                        <option value="venta_libre">✓ Venta Libre</option>
+                        <option value="receta_retenida">🔒 Receta Retenida</option>
+                    </select>
+                </div>
+
+                <div class="border-t border-slate-200 pt-3">
+                    <div class="font-bold text-slate-700 mb-2">Stock Inicial (Opcional)</div>
+                    <div class="grid grid-cols-4 gap-2.5">
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Cantidad</label>
+                            <input type="number" name="cantidad_inicial" min="0" value="50"
+                                   class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono-code">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Código Lote</label>
+                            <input type="text" name="lote_codigo" value="LOT-2026-{{ rand(300, 999) }}"
+                                   class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono-code">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Destino</label>
+                            <select name="ubicacion_inicial" class="w-full px-2 py-1.5 rounded-lg border border-slate-300">
+                                <option value="BODEGA">BODEGA</option>
+                                <option value="VITRINA">VITRINA</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-500 mb-1">Vencimiento</label>
+                            <input type="date" name="fecha_vencimiento" value="{{ now()->addMonths(8)->toDateString() }}"
+                                   class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-mono-code">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-nuevo-medicamento').classList.add('hidden')"
+                            class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold">
+                        Guardar Medicamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Editar Medicamento y Condición de Receta -->
+    <div id="modal-editar-medicamento" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
+            <div class="bg-[#1E40AF] text-white px-5 py-4 flex items-center justify-between">
+                <h3 class="font-bold text-sm">Editar Medicamento y Restricción de Receta</h3>
+                <button type="button" onclick="document.getElementById('modal-editar-medicamento').classList.add('hidden')" class="text-white">✕</button>
+            </div>
+            <form id="form-editar-medicamento" method="POST" class="p-5 space-y-3.5 text-xs">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
+                    <input type="text" id="edit-med-nombre" name="nombre_comercial" required
+                           class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
+                        <input type="text" id="edit-med-principio" name="principio_activo" required
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
+                        <input type="text" id="edit-med-laboratorio" name="laboratorio" required
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Precio Unitario ($)</label>
+                        <input type="number" id="edit-med-precio" name="precio_unitario" min="1" step="1" required
+                               class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Estado en Catálogo</label>
+                        <select id="edit-med-activo" name="activo"
+                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                            <option value="1">Activo</option>
+                            <option value="0">Deshabilitado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+                    <label class="block font-bold text-amber-950">Condición de Venta</label>
+                    <select id="edit-med-receta" name="condicion_receta"
+                            class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white font-semibold text-slate-800">
+                        <option value="venta_libre">✓ Venta Libre</option>
+                        <option value="receta_retenida">🔒 Receta Retenida</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-editar-medicamento').classList.add('hidden')"
+                            class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-[#1E40AF] text-white font-bold">
+                        Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditMedicationModal(med) {
+            const modal = document.getElementById('modal-editar-medicamento');
+            const form = document.getElementById('form-editar-medicamento');
+            if (!modal || !form) return;
+
+            form.action = med.update_url;
+            document.getElementById('edit-med-nombre').value = med.nombre_comercial || '';
+            document.getElementById('edit-med-principio').value = med.principio_activo || '';
+            document.getElementById('edit-med-laboratorio').value = med.laboratorio || '';
+            document.getElementById('edit-med-precio').value = Math.round(med.precio_unitario || 0);
+            document.getElementById('edit-med-receta').value = med.condicion_receta || 'venta_libre';
+            document.getElementById('edit-med-activo').value = String(med.activo ?? '1');
+
+            modal.classList.remove('hidden');
+        }
+    </script>
+@endif
+
+@if($canToggleLote)
+    <!-- Modal Retiro / Devolución Vitrina -> Bodega -->
+    <div id="modal-retiro-vitrina" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
+            <div class="bg-amber-600 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-sm">&darr; Retirar o Devolver Vitrina &rarr; Bodega</h3>
+                    <p class="text-[11px] text-amber-100">Retira unidades o quita completamente el lote de la vitrina de ventas</p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-retiro-vitrina').classList.add('hidden')" class="text-white">✕</button>
+            </div>
+            <form action="{{ route('inventario.return_to_storage') }}" method="POST" class="p-5 space-y-4 text-xs">
+                @csrf
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Lote Actualmente en Vitrina</label>
+                    <select id="retiro-id-lote" name="id_lote" required onchange="syncMaxRetiroVitrina()"
+                            class="w-full px-3 py-2.5 rounded-lg border border-slate-300">
+                        @foreach($lotesVitrina ?? [] as $lv)
+                            <option value="{{ $lv->id_lote }}" data-stock="{{ $lv->cantidad }}">
+                                {{ $lv->medicamento?->nombre_comercial }} — {{ $lv->lote_codigo }} (En vitrina: {{ $lv->cantidad }} u. | Vence en {{ $lv->dias_restantes }}d)
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-bold text-slate-700">Cantidad de Unidades a Retirar</label>
+                        <button type="button" onclick="setRetirarTodoLote()"
+                                class="text-[11px] font-bold text-amber-700 hover:underline">
+                            Retirar el 100% de vitrina
+                        </button>
+                    </div>
+                    <input type="number" id="retiro-cantidad" name="cantidad" min="1" value="10" required
+                           class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code font-bold">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Motivo del Retiro</label>
+                    <select name="motivo" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white">
+                        <option value="Sobrestock / Reorganización de mesón">Sobrestock / Reorganización de mesón</option>
+                        <option value="Retiro preventivo por vencimiento próximo">Retiro preventivo por vencimiento próximo</option>
+                        <option value="Resguardo sanitario en bodega">Resguardo sanitario en bodega</option>
+                        <option value="Envase secundario deteriorado">Envase secundario deteriorado</option>
+                        <option value="Corrección de traspaso interno">Corrección de traspaso interno</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-retiro-vitrina').classList.add('hidden')"
+                            class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold">
+                        Confirmar Retiro a Bodega
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function syncMaxRetiroVitrina() {
+            const sel = document.getElementById('retiro-id-lote');
+            const input = document.getElementById('retiro-cantidad');
+            if (!sel || !input || !sel.selectedOptions[0]) return;
+            const maxStock = parseInt(sel.selectedOptions[0].getAttribute('data-stock') || '1', 10);
+            input.max = maxStock;
+            if (parseInt(input.value || '0', 10) > maxStock) {
+                input.value = maxStock;
+            }
+        }
+
+        function setRetirarTodoLote() {
+            const sel = document.getElementById('retiro-id-lote');
+            const input = document.getElementById('retiro-cantidad');
+            if (!sel || !input || !sel.selectedOptions[0]) return;
+            const maxStock = parseInt(sel.selectedOptions[0].getAttribute('data-stock') || '1', 10);
+            input.max = maxStock;
+            input.value = maxStock;
+        }
+
+        function openRetiroVitrinaModal(idLote, stockActual) {
+            const modal = document.getElementById('modal-retiro-vitrina');
+            const sel = document.getElementById('retiro-id-lote');
+            const input = document.getElementById('retiro-cantidad');
+            if (!modal || !sel || !input) return;
+
+            sel.value = String(idLote);
+            input.max = stockActual;
+            input.value = stockActual;
+            modal.classList.remove('hidden');
+        }
+
+        function openTraspasoVitrinaModal(idLote, cantSugerida) {
+            const modal = document.getElementById('modal-traspaso-fefo');
+            const sel = document.getElementById('traspaso-bodega-id-lote');
+            const input = document.getElementById('traspaso-bodega-cantidad');
+            if (!modal) return;
+            if (sel) sel.value = String(idLote);
+            if (input) input.value = cantSugerida;
+            modal.classList.remove('hidden');
+        }
+
+        function openBajaCaducidadModal(lote) {
+            const modal = document.getElementById('modal-baja-caducidad');
+            const form = document.getElementById('form-baja-caducidad');
+            const titleEl = document.getElementById('baja-med-nombre');
+            const detailEl = document.getElementById('baja-lote-detalle');
+            const selectEl = document.getElementById('baja-motivo-select');
+            if (!modal || !form) return;
+
+            form.action = lote.action_url;
+            if (titleEl) titleEl.textContent = lote.medicamento || 'Medicamento';
+            if (detailEl) {
+                detailEl.textContent = `Lote ${lote.lote_codigo} • Ubicación: ${lote.ubicacion} • ${lote.cantidad} u.`;
+            }
+            if (selectEl) {
+                if (lote.dias <= 0) {
+                    selectEl.value = 'Vencimiento / Producto Caducado';
+                } else if (lote.dias <= 30) {
+                    selectEl.value = 'Retiro Preventivo por Vencimiento Próximo';
+                } else {
+                    selectEl.value = 'Merma / Rotura o Deterioro de Envase';
+                }
+            }
+            modal.classList.remove('hidden');
+        }
+    </script>
+
+    <!-- Modal Baja por Caducidad / Merma Sanitaria -->
+    <div id="modal-baja-caducidad" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
+            <div class="bg-red-700 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-sm">🗑️ Quitar por Caducado / Dar de Baja</h3>
+                    <p class="text-[11px] text-red-100">Retira el lote de Vitrina o Bodega y lo mueve al registro de Bajas y Caducados</p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-baja-caducidad').classList.add('hidden')" class="text-white">✕</button>
+            </div>
+            <form id="form-baja-caducidad" method="POST" class="p-5 space-y-4 text-xs">
+                @csrf
+                @method('PATCH')
+
+                <div class="p-3 rounded-xl bg-red-50 border border-red-200">
+                    <div id="baja-med-nombre" class="font-bold text-slate-900 text-sm"></div>
+                    <div id="baja-lote-detalle" class="text-[11px] text-red-800 font-mono-code mt-0.5"></div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Motivo de Baja</label>
+                    <select id="baja-motivo-select" name="motivo_baja" required class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white">
+                        <option value="Vencimiento / Producto Caducado">Vencimiento / Producto Caducado</option>
+                        <option value="Retiro Preventivo por Vencimiento Próximo">Retiro Preventivo por Vencimiento Próximo</option>
+                        <option value="Merma / Rotura o Deterioro de Envase">Merma / Rotura o Deterioro de Envase</option>
+                        <option value="Alerta Sanitaria / Retiro de Lote ISP">Alerta Sanitaria / Retiro de Lote ISP</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-baja-caducidad').classList.add('hidden')"
+                            class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold">
+                        Confirmar Baja
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+@endif
+
+@if($canManageStock)
+    <!-- Modal Traspaso Bodega -> Vitrina -->
     <div id="modal-traspaso-fefo" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
             <div class="bg-[#1E40AF] text-white px-5 py-4 flex items-center justify-between">
                 <div>
-                    <h3 class="font-bold text-sm">+ Traspaso Asistido Bodega &rarr; Vitrina</h3>
-                    <p class="text-[11px] text-blue-200">Sugiere automáticamente el lote con caducidad más próxima (FEFO)</p>
+                    <h3 class="font-bold text-sm">Traspaso Bodega &rarr; Vitrina</h3>
+                    <p class="text-[11px] text-blue-200">Prioriza automáticamente los lotes con vencimiento más próximo</p>
                 </div>
                 <button type="button" onclick="document.getElementById('modal-traspaso-fefo').classList.add('hidden')" class="text-white">✕</button>
             </div>
             <form action="{{ route('inventario.transfer') }}" method="POST" class="p-5 space-y-4 text-xs">
                 @csrf
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Lote Disponible en Bodega Central (Ordenado por FEFO)</label>
-                    <select name="id_lote" required class="w-full px-3 py-2.5 rounded-lg border border-slate-300">
+                    <label class="block font-bold text-slate-700 mb-1">Lote Disponible en Bodega</label>
+                    <select id="traspaso-bodega-id-lote" name="id_lote" required class="w-full px-3 py-2.5 rounded-lg border border-slate-300">
                         @foreach($lotesBodega as $lb)
                             <option value="{{ $lb->id_lote }}">
                                 {{ $lb->medicamento?->nombre_comercial }} — {{ $lb->lote_codigo }} (Stock: {{ $lb->cantidad }} u. | Vence en {{ $lb->dias_restantes }}d)
@@ -158,35 +741,49 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Cantidad a Traspasar a Vitrina</label>
-                    <input type="number" name="cantidad" min="1" value="25" required
+                    <label class="block font-bold text-slate-700 mb-1">Cantidad a Traspasar</label>
+                    <input type="number" id="traspaso-bodega-cantidad" name="cantidad" min="1" value="25" required
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="document.getElementById('modal-traspaso-fefo').classList.add('hidden')"
                             class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
                     <button type="submit" class="px-4 py-2 rounded-lg bg-[#1E40AF] text-white font-bold">
-                        Ejecutar Traspaso FEFO
+                        Confirmar Traspaso
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal Nueva Remesa (HU-04) -->
+    <!-- Modal Nueva Remesa / Ingreso de Lote de Stock -->
     <div id="modal-nueva-remesa" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
             <div class="bg-[#10B981] text-white px-5 py-4 flex items-center justify-between">
-                <h3 class="font-bold text-sm">+ Recepción de Nueva Remesa de Lote (HU-04)</h3>
+                <div>
+                    <h3 class="font-bold text-sm">📦 + Ingresar Lote de Stock</h3>
+                    <p class="text-[11px] text-emerald-100">Abastecimiento de unidades de un medicamento del catálogo</p>
+                </div>
                 <button type="button" onclick="document.getElementById('modal-nueva-remesa').classList.add('hidden')" class="text-white">✕</button>
             </div>
             <form action="{{ route('inventario.register') }}" method="POST" class="p-5 space-y-3.5 text-xs">
                 @csrf
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Medicamento</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-bold text-slate-700">Medicamento del Catálogo</label>
+                        @if($canManageMedications)
+                            <button type="button"
+                                    onclick="document.getElementById('modal-nueva-remesa').classList.add('hidden'); document.getElementById('modal-nuevo-medicamento').classList.remove('hidden');"
+                                    class="text-[11px] font-bold text-[#1E40AF] hover:underline">
+                                ¿Producto nuevo? Crear en Catálogo &rarr;
+                            </button>
+                        @endif
+                    </div>
                     <select name="id_medicamento" required class="w-full px-3 py-2 rounded-lg border border-slate-300">
                         @foreach($medicamentos as $m)
-                            <option value="{{ $m->id_medicamento }}">{{ $m->nombre_comercial }} ({{ $m->laboratorio }})</option>
+                            <option value="{{ $m->id_medicamento }}">
+                                {{ $m->nombre_comercial }} ({{ $m->laboratorio }}) {{ ($m->requiere_receta || $m->tipo_controlado) ? '— [Receta Retenida]' : '' }}
+                            </option>
                         @endforeach
                     </select>
                 </div>

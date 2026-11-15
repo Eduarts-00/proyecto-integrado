@@ -12,7 +12,7 @@
 </head>
 <body class="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC] text-[#0F172A]">
 
-    <!-- Panel Izquierdo Institucional (Azul Clínico #1E40AF -> #0F172A) -->
+    <!-- Panel Izquierdo Institucional -->
     <div class="lg:w-7/12 bg-gradient-to-br from-[#0F172A] via-[#172554] to-[#1E40AF] text-white p-10 lg:p-16 flex flex-col justify-center items-center text-center relative overflow-hidden">
         <div class="max-w-lg z-10">
             <div class="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center mx-auto mb-6 text-2xl font-extrabold text-blue-200 shadow-lg">
@@ -20,43 +20,43 @@
             </div>
             <h1 class="text-3xl lg:text-4xl font-extrabold tracking-tight mb-3">FarmaNet Pro</h1>
             <p class="text-blue-200/90 text-sm lg:text-base leading-relaxed mb-10">
-                Sistema de Gestión Integral para Farmacia Privada. Control transaccional, inventario FEFO y trazabilidad ISP en un solo módulo.
+                Sistema de Gestión Integral para Farmacia Privada. Dispensación en mostrador, control de inventario por vencimiento y registro sanitario ISP.
             </p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
                     <span class="text-lg">🔒</span>
                     <div>
-                        <div class="text-xs font-bold text-white">RBAC multicapa</div>
-                        <div class="text-[11px] text-blue-200/70">Principio de menor privilegio</div>
+                        <div class="text-xs font-bold text-white">Control por Perfil</div>
+                        <div class="text-[11px] text-blue-200/70">Accesos según cargo clínico</div>
                     </div>
                 </div>
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
                     <span class="text-lg">📋</span>
                     <div>
-                        <div class="text-xs font-bold text-white">Recetas retenidas ISP</div>
-                        <div class="text-[11px] text-blue-200/70">Firma SHA-256 + Log NoSQL</div>
+                        <div class="text-xs font-bold text-white">Recetas Retenidas</div>
+                        <div class="text-[11px] text-blue-200/70">Autorización Q.F. y Libro ISP</div>
                     </div>
                 </div>
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
                     <span class="text-lg">📦</span>
                     <div>
                         <div class="text-xs font-bold text-white">Inventario FEFO</div>
-                        <div class="text-[11px] text-blue-200/70">Bloqueo pesimista ACID</div>
+                        <div class="text-[11px] text-blue-200/70">Control de lotes y vencimientos</div>
                     </div>
                 </div>
                 <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
                     <span class="text-lg">📊</span>
                     <div>
-                        <div class="text-xs font-bold text-white">Dashboard gerencial</div>
-                        <div class="text-[11px] text-blue-200/70">KPIs en vivo y exportación</div>
+                        <div class="text-xs font-bold text-white">Dashboard Gerencial</div>
+                        <div class="text-[11px] text-blue-200/70">Indicadores y reportes del día</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Panel Derecho: Credenciales y Acceso Rápido por Rol (Demo) -->
+    <!-- Panel Derecho: Credenciales -->
     <div class="lg:w-5/12 bg-white p-8 lg:p-14 flex flex-col justify-center">
         <div class="max-w-md w-full mx-auto">
             <h2 class="text-2xl font-bold text-slate-900">Iniciar Sesión</h2>
@@ -89,20 +89,16 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
-                    <span>🛡️</span> Transmisión cifrada con TLS 1.3 • Hash Argon2id/Bcrypt
-                </div>
-
                 <button type="submit"
                         class="w-full py-2.5 px-4 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white font-semibold text-sm shadow-sm transition">
                     Ingresar al Sistema
                 </button>
             </form>
 
-            <!-- Módulo Pedagógico de Selección Rápida por Rol (Página 25) -->
+            <!-- Selección Rápida por Rol -->
             <div class="mt-8 pt-6 border-t border-slate-200">
                 <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
-                    Acceso Rápido por Rol (Demo Evaluación)
+                    Acceso Rápido por Perfil
                 </p>
 
                 <div class="space-y-2">
@@ -110,7 +106,7 @@
                         @csrf
                         <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-700 text-xs font-semibold flex items-center justify-between transition">
                             <span>Vendedor — Ana Torres</span>
-                            <span class="text-[10px] font-normal text-blue-500">POS / Convenios →</span>
+                            <span class="text-[10px] font-normal text-blue-500">Ingresar →</span>
                         </button>
                     </form>
 
@@ -118,7 +114,7 @@
                         @csrf
                         <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/80 text-emerald-700 text-xs font-semibold flex items-center justify-between transition">
                             <span>Q. Farmacéutico — Dr. Carlos Vega</span>
-                            <span class="text-[10px] font-normal text-emerald-600">PIN ISP: 4421 →</span>
+                            <span class="text-[10px] font-normal text-emerald-600">Ingresar →</span>
                         </button>
                     </form>
 
@@ -126,7 +122,7 @@
                         @csrf
                         <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-amber-200 bg-amber-50/60 hover:bg-amber-100/80 text-amber-800 text-xs font-semibold flex items-center justify-between transition">
                             <span>Bodeguero — Luis Pinto</span>
-                            <span class="text-[10px] font-normal text-amber-600">Inventario FEFO →</span>
+                            <span class="text-[10px] font-normal text-amber-600">Ingresar →</span>
                         </button>
                     </form>
 
@@ -134,7 +130,7 @@
                         @csrf
                         <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 text-purple-700 text-xs font-semibold flex items-center justify-between transition">
                             <span>Administrador — María Salinas</span>
-                            <span class="text-[10px] font-normal text-purple-600">Dashboard / RBAC →</span>
+                            <span class="text-[10px] font-normal text-purple-600">Ingresar →</span>
                         </button>
                     </form>
                 </div>

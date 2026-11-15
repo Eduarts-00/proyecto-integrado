@@ -130,7 +130,7 @@ class IspValidationController extends Controller
 
             return redirect()->route('autorizaciones.index')->with(
                 'success',
-                "Receta Folio {$registro->folio_receta} AUTORIZADA y firmada con SHA-256 ({$registro->qf_signature}). Boleta #{$venta->id_venta} emitida y auditada en MongoDB."
+                "Receta Folio {$registro->folio_receta} autorizada correctamente. Boleta #{$venta->id_venta} emitida y registrada en el Libro Oficial ISP."
             );
         } catch (RuntimeException $e) {
             if ($request->expectsJson()) {

@@ -24,9 +24,20 @@ class SaleController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->query('q', ''));
+        $categoriaFiltro = trim((string) $request->query('categoria', ''));
+        $soloConvenio = (bool) $request->boolean('solo_convenio', false);
 
-        $medicamentosQuery = Medication::with(['lotes' => function ($q) {
-            $q->where('ubicacion', 'VITRINA')
+        $categoriasDisponibles = Medication::where('activo', true)
+            ->select('categoria')
+            ->distinct()
+            ->orderBy('categoria')
+            ->pluck('categoria')
+            ->filter()
+            ->values();
+
+        $medicamentosQuery = Medication::where('activo', true)->with(['lotes' => function ($q) {
+            $q->where('activo', true)
+                ->where('ubicacion', 'VITRINA')
                 ->where('cantidad', '>', 0)
                 ->whereDate('fecha_vencimiento', '>', now()->toDateString())
                 ->orderBy('fecha_vencimiento', 'asc');
@@ -36,16 +47,26 @@ class SaleController extends Controller
             $medicamentosQuery->where(function ($q) use ($search) {
                 $q->where('nombre_comercial', 'like', "%{$search}%")
                     ->orWhere('principio_activo', 'like', "%{$search}%")
+                    ->orWhere('laboratorio', 'like', "%{$search}%")
+                    ->orWhere('categoria', 'like', "%{$search}%")
                     ->orWhere('codigo_barras', 'like', "%{$search}%");
             });
         }
 
+        if ($categoriaFiltro !== '') {
+            $medicamentosQuery->where('categoria', $categoriaFiltro);
+        }
+
         $medicamentos = $medicamentosQuery->get();
-        $convenios = HealthAgreement::where('activo', true)->orderBy('porcentaje_descuento', 'desc')->get();
+        $convenios = HealthAgreement::with('medicamentos')->vigentes()->orderBy('porcentaje_descuento', 'desc')->get();
 
         $cart = session('pos_cart', []);
         $selectedConvenioId = session('pos_convenio_id');
-        $selectedConvenio = $selectedConvenioId ? HealthAgreement::find($selectedConvenioId) : null;
+        $selectedConvenio = $selectedConvenioId ? HealthAgreement::with('medicamentos')->find($selectedConvenioId) : null;
+
+        if ($soloConvenio && $selectedConvenio && $selectedConvenio->porcentaje_descuento > 0) {
+            $medicamentos = $medicamentos->filter(fn (Medication $m) => $selectedConvenio->cubreMedicamento($m))->values();
+        }
 
         $subtotal = 0.0;
         $hasControlledItems = false;
@@ -58,8 +79,12 @@ class SaleController extends Controller
             }
             $fefoBatch = $this->inventoryService->getFefoBatch($med->id_medicamento, 'VITRINA');
             $qty = (int) $row['cantidad'];
-            $lineSubtotal = $med->precio_unitario * $qty;
+            $lineSubtotal = round($med->precio_unitario * $qty, 0);
             $subtotal += $lineSubtotal;
+
+            $pctConvenioMed = $selectedConvenio ? $selectedConvenio->obtenerPorcentajeParaMedicamento($med) : 0.0;
+            $descuentoLinea = round($lineSubtotal * ($pctConvenioMed / 100), 0);
+            $copagoLinea = max(0.0, $lineSubtotal - $descuentoLinea);
 
             $isControlled = $med->tipo_controlado || $med->requiere_receta;
             if ($isControlled) {
@@ -82,6 +107,10 @@ class SaleController extends Controller
                 'cantidad' => $qty,
                 'precio_unitario' => $med->precio_unitario,
                 'subtotal' => $lineSubtotal,
+                'cubierto_convenio' => $pctConvenioMed > 0,
+                'porcentaje_convenio' => $pctConvenioMed,
+                'descuento_linea' => $descuentoLinea,
+                'total_copago_linea' => $copagoLinea,
                 'es_controlado' => $isControlled,
                 'autorizacion_isp' => $authorizedIsp,
             ];
@@ -95,7 +124,7 @@ class SaleController extends Controller
             }
         }
 
-        $liquidacion = $this->saleService->calculateCopay($subtotal, $selectedConvenio);
+        $liquidacion = $this->saleService->calculateCartCopay($cartDetailed, $selectedConvenio);
         $pendientesIspHoy = IspLog::with(['medicamento', 'vendedor'])
             ->where('estado', 'PENDIENTE')
             ->latest('id_registro')
@@ -121,7 +150,10 @@ class SaleController extends Controller
             'pendientesIspHoy',
             'autorizadasDisponibles',
             'qfUsers',
-            'search'
+            'search',
+            'categoriasDisponibles',
+            'categoriaFiltro',
+            'soloConvenio'
         ));
     }
 
@@ -135,11 +167,14 @@ class SaleController extends Controller
 
         $med = null;
         if (! empty($data['id_medicamento'])) {
-            $med = Medication::find($data['id_medicamento']);
+            $med = Medication::where('activo', true)->find($data['id_medicamento']);
         } elseif (! empty($data['codigo_barras'])) {
             $term = trim($data['codigo_barras']);
-            $med = Medication::where('codigo_barras', $term)
-                ->orWhere('nombre_comercial', 'like', "%{$term}%")
+            $med = Medication::where('activo', true)
+                ->where(function ($q) use ($term) {
+                    $q->where('codigo_barras', $term)
+                        ->orWhere('nombre_comercial', 'like', "%{$term}%");
+                })
                 ->first();
         }
 
@@ -282,7 +317,7 @@ class SaleController extends Controller
             }
 
             return redirect()->route('pos.index')
-                ->with('success', "Boleta Electrónica #{$venta->id_venta} emitida con éxito por $" . number_format($venta->total, 0, ',', '.') . " (Stock Vitrina descontado por FEFO).")
+                ->with('success', "Boleta Electrónica #{$venta->id_venta} emitida con éxito por $" . number_format($venta->total, 0, ',', '.') . ".")
                 ->with('boleta_emitida', $venta);
         } catch (RuntimeException $e) {
             $status = in_array($e->getCode(), [401, 403, 409, 422], true) ? $e->getCode() : 422;

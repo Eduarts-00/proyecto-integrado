@@ -24,7 +24,7 @@ class SaleService
      */
     public function calculateCopay(float $subtotal, ?HealthAgreement $convenio = null): array
     {
-        $porcentaje = $convenio && $convenio->activo ? (float) $convenio->porcentaje_descuento : 0.0;
+        $porcentaje = $convenio && $convenio->esta_vigente ? (float) $convenio->porcentaje_descuento : 0.0;
         $descuento = round($subtotal * ($porcentaje / 100), 0);
         $total = max(0.0, round($subtotal - $descuento, 0));
         $neto = round($total / 1.19, 0);
@@ -32,11 +32,90 @@ class SaleService
 
         return [
             'subtotal' => round($subtotal, 0),
+            'monto_afecto_convenio' => $porcentaje > 0 ? round($subtotal, 0) : 0.0,
+            'monto_no_cubierto' => $porcentaje > 0 ? 0.0 : round($subtotal, 0),
+            'items_cubiertos_count' => 0,
+            'items_no_cubiertos_count' => 0,
             'porcentaje_descuento' => $porcentaje,
             'descuento_total' => $descuento,
             'neto' => $neto,
             'iva' => $iva,
             'total' => $total,
+            'por_medicamento' => [],
+        ];
+    }
+
+    /**
+     * Liquidación real de Farmacia Privada por Vademécum:
+     * Evalúa cada medicamento del carro contra el Vademécum del convenio seleccionado.
+     * Solo los medicamentos adheridos al convenio reciben bonificación; el resto paga precio normal.
+     *
+     * @param  array<int, array{medicamento?: Medication, id_medicamento?: int, cantidad: int}>  $items
+     */
+    public function calculateCartCopay(array $items, ?HealthAgreement $convenio = null): array
+    {
+        if ($convenio) {
+            $convenio->loadMissing('medicamentos');
+        }
+
+        $subtotal = 0.0;
+        $montoAfectoConvenio = 0.0;
+        $montoNoCubierto = 0.0;
+        $descuentoTotal = 0.0;
+        $itemsCubiertosCount = 0;
+        $itemsNoCubiertosCount = 0;
+        $porMedicamento = [];
+
+        foreach ($items as $item) {
+            $med = $item['medicamento'] ?? Medication::find((int) ($item['id_medicamento'] ?? 0));
+            if (! $med) {
+                continue;
+            }
+
+            $cantidad = max(1, (int) ($item['cantidad'] ?? 1));
+            $brutoLinea = round($med->precio_unitario * $cantidad, 0);
+            $pctMed = $convenio ? $convenio->obtenerPorcentajeParaMedicamento($med) : 0.0;
+            $descuentoLinea = round($brutoLinea * ($pctMed / 100), 0);
+            $copagoLinea = max(0.0, $brutoLinea - $descuentoLinea);
+            $cubierto = $pctMed > 0;
+
+            $subtotal += $brutoLinea;
+            $descuentoTotal += $descuentoLinea;
+
+            if ($cubierto) {
+                $montoAfectoConvenio += $brutoLinea;
+                $itemsCubiertosCount++;
+            } else {
+                $montoNoCubierto += $brutoLinea;
+                $itemsNoCubiertosCount++;
+            }
+
+            $porMedicamento[$med->id_medicamento] = [
+                'cubierto' => $cubierto,
+                'porcentaje' => $pctMed,
+                'subtotal_bruto' => $brutoLinea,
+                'descuento' => $descuentoLinea,
+                'total_copago' => $copagoLinea,
+            ];
+        }
+
+        $total = max(0.0, round($subtotal - $descuentoTotal, 0));
+        $neto = round($total / 1.19, 0);
+        $iva = round($total - $neto, 0);
+        $porcentajeConvenio = $convenio && $convenio->esta_vigente ? (float) $convenio->porcentaje_descuento : 0.0;
+
+        return [
+            'subtotal' => round($subtotal, 0),
+            'monto_afecto_convenio' => round($montoAfectoConvenio, 0),
+            'monto_no_cubierto' => round($montoNoCubierto, 0),
+            'items_cubiertos_count' => $itemsCubiertosCount,
+            'items_no_cubiertos_count' => $itemsNoCubiertosCount,
+            'porcentaje_descuento' => $porcentajeConvenio,
+            'descuento_total' => round($descuentoTotal, 0),
+            'neto' => $neto,
+            'iva' => $iva,
+            'total' => $total,
+            'por_medicamento' => $porMedicamento,
         ];
     }
 
@@ -67,9 +146,9 @@ class SaleService
         }
 
         return DB::transaction(function () use ($items, $vendedor, $idConvenio, $autorizacionIsp) {
-            $subtotal = 0.0;
             $requiereControlIsp = false;
             $medicamentosMap = [];
+            $itemsConModelo = [];
 
             foreach ($items as $item) {
                 $med = Medication::findOrFail((int) $item['id_medicamento']);
@@ -83,8 +162,11 @@ class SaleService
                     $requiereControlIsp = true;
                 }
 
-                $subtotal += $med->precio_unitario * $cantidad;
                 $medicamentosMap[$med->id_medicamento] = $med;
+                $itemsConModelo[] = [
+                    'medicamento' => $med,
+                    'cantidad' => $cantidad,
+                ];
             }
 
             $qfAutorizador = null;
@@ -125,8 +207,8 @@ class SaleService
                 }
             }
 
-            $convenio = $idConvenio ? HealthAgreement::find($idConvenio) : null;
-            $liquidacion = $this->calculateCopay($subtotal, $convenio);
+            $convenio = $idConvenio ? HealthAgreement::with('medicamentos')->find($idConvenio) : null;
+            $liquidacion = $this->calculateCartCopay($itemsConModelo, $convenio);
 
             $venta = Sale::create([
                 'id_usuario' => $vendedor->id_usuario,
@@ -142,6 +224,7 @@ class SaleService
             foreach ($items as $item) {
                 $med = $medicamentosMap[(int) $item['id_medicamento']];
                 $cantidad = (int) $item['cantidad'];
+                $pctMed = $convenio ? $convenio->obtenerPorcentajeParaMedicamento($med) : 0.0;
 
                 $descuentosLote = $this->inventoryService->deductByFefo($med->id_medicamento, $cantidad, 'VITRINA');
 
@@ -150,13 +233,17 @@ class SaleService
                     $batch = $descuentoLote['batch'];
                     $cantLote = (int) $descuentoLote['cantidad'];
 
+                    $brutoLote = round($med->precio_unitario * $cantLote, 0);
+                    $dctoLote = round($brutoLote * ($pctMed / 100), 0);
+                    $subtotalLineaCopago = max(0.0, $brutoLote - $dctoLote);
+
                     $detalle = SaleDetail::create([
                         'id_venta' => $venta->id_venta,
                         'id_lote' => $batch->id_lote,
                         'id_medicamento' => $med->id_medicamento,
                         'cantidad' => $cantLote,
                         'precio_unitario' => $med->precio_unitario,
-                        'subtotal_linea' => round($med->precio_unitario * $cantLote, 0),
+                        'subtotal_linea' => $subtotalLineaCopago,
                     ]);
 
                     if (($med->tipo_controlado || $med->requiere_receta) && $qfAutorizador) {

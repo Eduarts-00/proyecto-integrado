@@ -33,11 +33,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pos/checkout', [SaleController::class, 'processCheckout'])->middleware('throttle:60,1')->name('pos.checkout');
     });
 
-    // Pantalla 3: Módulo de Convenios de Salud y Copagos
+    // Pantalla 3: Módulo de Convenios de Salud y Copagos (Lectura para Vendedor/Q.F./Admin; escritura exclusiva Admin)
     Route::middleware(['role:vendedor,quimico_farmaceutico,administrador'])->group(function () {
         Route::get('/convenios', [HealthAgreementController::class, 'index'])->name('convenios.index');
+    });
+
+    Route::middleware(['role:administrador'])->group(function () {
         Route::post('/convenios', [HealthAgreementController::class, 'store'])->name('convenios.store');
         Route::put('/convenios/{idConvenio}', [HealthAgreementController::class, 'update'])->name('convenios.update');
+        Route::patch('/convenios/{idConvenio}/estado', [HealthAgreementController::class, 'toggleStatus'])->name('convenios.toggle_status');
         Route::delete('/convenios/{idConvenio}', [HealthAgreementController::class, 'destroy'])->name('convenios.destroy');
     });
 
@@ -55,9 +59,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/api/inventario/fefo', [InventoryController::class, 'getFefoList'])->name('inventario.fefo');
     });
 
-    Route::middleware(['role:bodeguero'])->group(function () {
+    Route::middleware(['role:quimico_farmaceutico,administrador'])->group(function () {
+        Route::post('/inventario/medicamentos', [InventoryController::class, 'storeMedication'])->name('inventario.medications.store');
+        Route::put('/inventario/medicamentos/{idMedicamento}', [InventoryController::class, 'updateMedication'])->name('inventario.medications.update');
+        Route::patch('/inventario/medicamentos/{idMedicamento}/receta', [InventoryController::class, 'togglePrescriptionRestriction'])->name('inventario.medications.toggle_prescription');
+    });
+
+    Route::middleware(['role:bodeguero,administrador'])->group(function () {
         Route::post('/inventario/remesa', [InventoryController::class, 'registerBatch'])->name('inventario.register');
         Route::post('/inventario/traspaso', [InventoryController::class, 'transferToDisplay'])->name('inventario.transfer');
+    });
+
+    Route::middleware(['role:bodeguero,quimico_farmaceutico,administrador'])->group(function () {
+        Route::post('/inventario/retiro-vitrina', [InventoryController::class, 'transferToStorage'])->name('inventario.return_to_storage');
+        Route::patch('/inventario/lotes/{idLote}/estado', [InventoryController::class, 'toggleBatchStatus'])->name('inventario.toggle_batch');
     });
 
     // Pantalla 6: Dashboard Gerencial y Analítica (Exclusivo Administrador)
@@ -69,6 +84,12 @@ Route::middleware(['auth'])->group(function () {
         // HU-05: Mantenedor de Usuarios RBAC y Auditoría Forense NoSQL
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
         Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
+        Route::put('/usuarios/{idUsuario}', [UserController::class, 'update'])->name('usuarios.update');
         Route::put('/usuarios/{idUsuario}/rol', [UserController::class, 'updateRole'])->name('usuarios.update_role');
+        Route::patch('/usuarios/{idUsuario}/estado', [UserController::class, 'toggleStatus'])->name('usuarios.toggle_status');
     });
 });
+
+// Cualquier ruta inexistente escrita en la barra de direcciones redirige automáticamente al inicio
+Route::fallback(fn () => redirect()->route('login'));
+

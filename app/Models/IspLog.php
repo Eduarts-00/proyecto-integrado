@@ -30,6 +30,7 @@ class IspLog extends Model
         'qf_signature',
         'hash_integridad',
         'datos_carro_json',
+        'activo',
     ];
 
     protected function casts(): array
@@ -37,6 +38,7 @@ class IspLog extends Model
         return [
             'cantidad' => 'integer',
             'fecha_autorizacion' => 'datetime',
+            'activo' => 'boolean',
         ];
     }
 

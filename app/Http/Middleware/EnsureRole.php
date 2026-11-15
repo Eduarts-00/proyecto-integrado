@@ -23,6 +23,16 @@ class EnsureRole
             return redirect()->route('login');
         }
 
+        if (! $user->activo) {
+            auth()->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'rut' => 'Su cuenta de acceso se encuentra deshabilitada.',
+            ]);
+        }
+
         $user->loadMissing('rol');
 
         if (! in_array($user->role, $roles, true)) {

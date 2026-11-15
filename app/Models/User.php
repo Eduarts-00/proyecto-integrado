@@ -97,6 +97,7 @@ class User extends Authenticatable
             'quimico_farmaceutico' => [
                 'Can_Sell_OTC',
                 'Can_Authorize_Prescription',
+                'Can_Manage_Medications',
                 'pos.view',
                 'pos.sell',
                 'autorizaciones.view',
@@ -113,12 +114,15 @@ class User extends Authenticatable
             'administrador' => [
                 'Can_Audit_Logs',
                 'Can_Manage_Users',
+                'Can_Manage_Stock',
+                'Can_Manage_Medications',
                 'dashboard.view',
                 'dashboard.export',
                 'pos.view',
                 'autorizaciones.view',
                 'libro_isp.view',
                 'inventario.view',
+                'inventario.manage',
                 'convenios.view',
                 'convenios.manage',
                 'usuarios.manage',

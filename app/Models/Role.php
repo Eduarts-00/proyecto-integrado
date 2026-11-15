@@ -17,7 +17,15 @@ class Role extends Model
         'codigo_rol',
         'nombre_rol',
         'descripcion',
+        'activo',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'activo' => 'boolean',
+        ];
+    }
 
     public function usuarios(): HasMany
     {

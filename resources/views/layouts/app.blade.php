@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'FarmaNet Pro — Sistema Web Farmacia Privada')</title>
+    <title>@yield('title', 'FarmaNet Pro — Sistema de Gestión Farmacéutica')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@
         ];
     @endphp
 
-    <!-- Barra superior Mobile (WCAG 2.1 Responsive) -->
+    <!-- Barra superior Mobile -->
     <div class="lg:hidden bg-[#0F172A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-800">
         <div class="flex items-center gap-2.5">
             <span class="w-8 h-8 rounded-lg bg-[#1E40AF] flex items-center justify-center font-bold text-sm">Rx</span>
@@ -44,13 +44,21 @@
                 <div class="text-[11px] text-slate-400">{{ $currentUser?->nombre_completo }} ({{ $currentUser?->role_label }})</div>
             </div>
         </div>
-        <button onclick="document.getElementById('sidebar-menu').classList.toggle('hidden')" class="p-2 rounded-lg bg-slate-800 text-slate-200">
-            ☰ Menú
-        </button>
+        <div class="flex items-center gap-2">
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-red-500/20 border border-red-400/30 text-red-200 text-xs font-semibold">
+                    ↪ Salir
+                </button>
+            </form>
+            <button onclick="document.getElementById('sidebar-menu').classList.toggle('hidden')" class="p-2 rounded-lg bg-slate-800 text-slate-200 text-xs">
+                ☰ Menú
+            </button>
+        </div>
     </div>
 
-    <!-- Sidebar Institucional Orientada al Rol -->
-    <aside id="sidebar-menu" class="hidden lg:flex flex-col w-full lg:w-64 bg-[#0F172A] text-white shrink-0 justify-between border-r border-slate-800">
+    <!-- Sidebar -->
+    <aside id="sidebar-menu" class="hidden lg:flex flex-col w-full lg:w-64 lg:sticky lg:top-0 lg:h-screen bg-[#0F172A] text-white shrink-0 justify-between border-r border-slate-800 overflow-y-auto">
         <div>
             <!-- Brand Header -->
             <div class="p-5 flex items-center gap-3 border-b border-slate-800/80">
@@ -63,25 +71,33 @@
                 </div>
             </div>
 
-            <!-- Perfil Activo -->
-            <div class="p-4 mx-3 my-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <!-- Perfil Activo (con acceso directo a Cerrar Sesión arriba) -->
+            <div class="p-3.5 mx-3 my-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-[#1E40AF] flex items-center justify-center font-bold text-xs text-white uppercase">
+                    <div class="w-9 h-9 rounded-full bg-[#1E40AF] flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
                         {{ substr($currentUser?->nombre_completo ?? 'U', 0, 1) }}
                     </div>
-                    <div class="overflow-hidden">
+                    <div class="overflow-hidden flex-1">
                         <p class="font-semibold text-xs text-white truncate">{{ $currentUser?->nombre_completo }}</p>
                         <p class="text-[10px] text-slate-400 font-mono-code">{{ $currentUser?->rut }}</p>
                     </div>
                 </div>
-                <div class="mt-2.5">
+                <div class="mt-2.5 flex items-center justify-between gap-2">
                     <span class="inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-md border {{ $badgeColors[$role] ?? 'bg-blue-600/30 text-blue-200' }}">
                         {{ $currentUser?->role_label }}
                     </span>
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                                title="Cerrar sesión actual"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/15 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-[10px] font-semibold transition">
+                            ↪ Salir
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            <!-- Navegación Filtrada por RBAC -->
+            <!-- Navegación -->
             <div class="px-3 py-2">
                 <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Módulos</p>
                 <nav class="space-y-1">
@@ -102,7 +118,7 @@
                     @if(in_array($role, ['quimico_farmaceutico', 'administrador'], true))
                         <a href="{{ route('autorizaciones.index') }}"
                            class="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition {{ request()->routeIs('autorizaciones.*') ? 'bg-[#1E40AF] text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <span class="flex items-center gap-2.5">🛡️ Autorización ISP</span>
+                            <span class="flex items-center gap-2.5">🛡️ Autorización</span>
                             @if($pendingIspCount > 0)
                                 <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#EF4444] text-white animate-pulse-badge">
                                     {{ $pendingIspCount }}
@@ -114,7 +130,7 @@
                     @if(in_array($role, ['bodeguero', 'quimico_farmaceutico', 'vendedor', 'administrador'], true))
                         <a href="{{ route('inventario.index') }}"
                            class="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition {{ request()->routeIs('inventario.*') ? 'bg-[#1E40AF] text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <span class="flex items-center gap-2.5">📦 Inventario FEFO</span>
+                            <span class="flex items-center gap-2.5">📦 Inventario</span>
                         </a>
                     @endif
 
@@ -128,17 +144,17 @@
                     @if($role === 'administrador')
                         <a href="{{ route('usuarios.index') }}"
                            class="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition {{ request()->routeIs('usuarios.*') ? 'bg-[#1E40AF] text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
-                            <span class="flex items-center gap-2.5">🔐 Usuarios & Auditoría</span>
+                            <span class="flex items-center gap-2.5">👥 Usuarios</span>
                         </a>
                     @endif
                 </nav>
             </div>
         </div>
 
-        <!-- Selector pedagógico rápido de Rol & Cierre de Sesión -->
+        <!-- Cambio de Perfil & Cierre de Sesión -->
         <div class="p-4 border-t border-slate-800 text-xs space-y-3">
             <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                <p class="text-[10px] font-semibold uppercase text-slate-400 mb-1.5">Cambio Rápido Rol (Demo)</p>
+                <p class="text-[10px] font-semibold uppercase text-slate-400 mb-1.5">Cambiar Perfil</p>
                 <div class="grid grid-cols-2 gap-1">
                     <form action="{{ route('login.demo', 'vendedor') }}" method="POST">
                         @csrf
@@ -149,7 +165,7 @@
                     <form action="{{ route('login.demo', 'quimico_farmaceutico') }}" method="POST">
                         @csrf
                         <button type="submit" class="w-full text-left px-2 py-1 rounded text-[10px] {{ $role === 'quimico_farmaceutico' ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
-                            Q.F. (ISP)
+                            Q. Farmacéutico
                         </button>
                     </form>
                     <form action="{{ route('login.demo', 'bodeguero') }}" method="POST">
@@ -161,7 +177,7 @@
                     <form action="{{ route('login.demo', 'administrador') }}" method="POST">
                         @csrf
                         <button type="submit" class="w-full text-left px-2 py-1 rounded text-[10px] {{ $role === 'administrador' ? 'bg-purple-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
-                            Admin
+                            Administrador
                         </button>
                     </form>
                 </div>
@@ -171,20 +187,13 @@
                 <span>v2.4.1</span>
                 <span>ISP Reg. #4421</span>
             </div>
-
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition text-xs font-medium">
-                    <span>↪</span> Cerrar Sesión
-                </button>
-            </form>
         </div>
     </aside>
 
     <!-- Contenedor Principal -->
     <div class="flex-1 flex flex-col min-w-0">
-        <!-- Top Status Bar -->
-        <header class="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between text-xs text-slate-500">
+        <!-- Top Status Bar (Fija arriba con Cerrar Sesión rápido) -->
+        <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-2.5 flex items-center justify-between text-xs text-slate-500">
             <div class="flex items-center gap-3">
                 <span class="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
                     <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
@@ -192,16 +201,23 @@
                 </span>
                 <span class="text-slate-300">|</span>
                 <span id="live-clock" class="font-mono-code text-slate-500">{{ now()->format('H:i:s') }}</span>
-                <span class="hidden sm:inline text-slate-300">|</span>
-                <span class="hidden sm:inline text-[11px] text-slate-400">VLAN 20 DMZ • TLS 1.3 Activo</span>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
                 @if($pendingIspCount > 0 && in_array($role, ['quimico_farmaceutico', 'administrador'], true))
                     <a href="{{ route('autorizaciones.index') }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[#EF4444] font-semibold text-[11px] animate-pulse-badge">
-                        ⚠️ {{ $pendingIspCount }} Receta(s) Retenida(s) en Cola
+                        ⚠️ {{ $pendingIspCount }} Receta(s) Pendiente(s)
                     </a>
                 @endif
-                <span class="font-mono-code text-slate-400">ISP Reg. #4421</span>
+                <span class="hidden sm:inline font-mono-code text-slate-400">ISP Reg. #4421</span>
+                <span class="hidden sm:inline text-slate-200">|</span>
+                <form action="{{ route('logout') }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-bold text-xs transition shadow-sm">
+                        <span>↪</span>
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </form>
             </div>
         </header>
 

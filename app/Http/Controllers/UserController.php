@@ -8,6 +8,7 @@ use App\Services\AuditLogService;
 use App\Services\RutValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -34,12 +35,19 @@ class UserController extends Controller
         ]);
 
         if (! RutValidator::validate($data['rut'])) {
-            return back()->with('error', 'El RUN ingresado no supera la validación matemática Módulo 11.');
+            return back()->with('error', 'El RUN ingresado no es válido.');
         }
 
         $formattedRut = RutValidator::format($data['rut']);
         if (User::where('rut', $formattedRut)->exists()) {
             return back()->with('error', 'Ya existe un funcionario registrado con ese RUN.');
+        }
+
+        $rolSeleccionado = Role::findOrFail((int) $data['id_rol']);
+        $esQuimico = $rolSeleccionado->codigo_rol === 'quimico_farmaceutico';
+
+        if ($esQuimico && empty($data['pin_qf'])) {
+            return back()->with('error', 'Debe asignar un PIN de autorización para el perfil de Químico Farmacéutico.');
         }
 
         $nuevo = User::create([
@@ -48,7 +56,7 @@ class UserController extends Controller
             'email' => strtolower(trim($data['email'])),
             'id_rol' => (int) $data['id_rol'],
             'password_hash' => Hash::make($data['password']),
-            'pin_qf' => ! empty($data['pin_qf']) ? Hash::make($data['pin_qf']) : null,
+            'pin_qf' => ($esQuimico && ! empty($data['pin_qf'])) ? Hash::make($data['pin_qf']) : null,
             'activo' => true,
         ]);
 
@@ -59,7 +67,81 @@ class UserController extends Controller
         ], $request->user());
 
         return redirect()->route('usuarios.index')
-            ->with('success', "Usuario '{$nuevo->nombre_completo}' creado con rol asignado bajo política RBAC.");
+            ->with('success', "Usuario '{$nuevo->nombre_completo}' registrado correctamente.");
+    }
+
+    public function update(Request $request, int $idUsuario)
+    {
+        $usuario = User::findOrFail($idUsuario);
+
+        $data = $request->validate([
+            'rut' => ['required', 'string', 'max:15'],
+            'nombre_completo' => ['required', 'string', 'max:120'],
+            'email' => [
+                'required',
+                'email',
+                'max:120',
+                Rule::unique('usuarios', 'email')->ignore($usuario->id_usuario, 'id_usuario'),
+            ],
+            'id_rol' => ['required', 'integer', 'exists:roles,id_rol'],
+            'activo' => ['required', 'boolean'],
+            'password' => ['nullable', 'string', 'min:8'],
+            'pin_qf' => ['nullable', 'string', 'max:10'],
+        ]);
+
+        if (! RutValidator::validate($data['rut'])) {
+            return back()->with('error', 'El RUN ingresado no es válido.');
+        }
+
+        $formattedRut = RutValidator::format($data['rut']);
+        if (User::where('rut', $formattedRut)->where('id_usuario', '!=', $usuario->id_usuario)->exists()) {
+            return back()->with('error', 'Ya existe otro funcionario registrado con ese RUN.');
+        }
+
+        if ($usuario->id_usuario === $request->user()?->id_usuario && ! (bool) $data['activo']) {
+            return back()->with('error', 'No puede deshabilitar su propia cuenta de administrador en uso.');
+        }
+
+        $rolSeleccionado = Role::findOrFail((int) $data['id_rol']);
+        $esQuimico = $rolSeleccionado->codigo_rol === 'quimico_farmaceutico';
+
+        if ($esQuimico && empty($data['pin_qf']) && empty($usuario->pin_qf)) {
+            return back()->with('error', 'Debe asignar un PIN de autorización para el perfil de Químico Farmacéutico.');
+        }
+
+        $pinQfActualizado = $usuario->pin_qf;
+        if (! $esQuimico) {
+            $pinQfActualizado = null;
+        } elseif (! empty($data['pin_qf'])) {
+            $pinQfActualizado = Hash::make($data['pin_qf']);
+        }
+
+        $camposActualizar = [
+            'rut' => $formattedRut,
+            'nombre_completo' => trim($data['nombre_completo']),
+            'email' => strtolower(trim($data['email'])),
+            'id_rol' => (int) $data['id_rol'],
+            'activo' => (bool) $data['activo'],
+            'pin_qf' => $pinQfActualizado,
+        ];
+
+        if (! empty($data['password'])) {
+            $camposActualizar['password_hash'] = Hash::make($data['password']);
+        }
+
+        $usuario->update($camposActualizar);
+        $usuario->load('rol');
+
+        $this->auditLogService->recordSecurityEvent('ACTUALIZACION_DATOS_PERSONAL', [
+            'usuario_afectado' => $usuario->rut,
+            'nombre' => $usuario->nombre_completo,
+            'email' => $usuario->email,
+            'rol' => $usuario->role,
+            'activo' => $usuario->activo,
+        ], $request->user());
+
+        return redirect()->route('usuarios.index')
+            ->with('success', "Datos de '{$usuario->nombre_completo}' actualizados correctamente.");
     }
 
     public function updateRole(Request $request, int $idUsuario)
@@ -87,6 +169,32 @@ class UserController extends Controller
         ], $request->user());
 
         return redirect()->route('usuarios.index')
-            ->with('success', "Privilegios RBAC actualizados para {$usuario->nombre_completo}.");
+            ->with('success', "Cargo actualizado para {$usuario->nombre_completo}.");
+    }
+
+    public function toggleStatus(Request $request, int $idUsuario)
+    {
+        $usuario = User::findOrFail($idUsuario);
+
+        if ($usuario->id_usuario === $request->user()?->id_usuario) {
+            return back()->with('error', 'No puede deshabilitar su propia cuenta de administrador en uso.');
+        }
+
+        $usuario->activo = ! $usuario->activo;
+        $usuario->save();
+
+        $evento = $usuario->activo ? 'REACTIVACION_PERSONAL_FARMACIA' : 'BAJA_PERSONAL_FARMACIA';
+
+        $this->auditLogService->recordSecurityEvent($evento, [
+            'usuario_afectado' => $usuario->rut,
+            'nombre' => $usuario->nombre_completo,
+            'nuevo_estado' => $usuario->activo ? 'ACTIVO' : 'INACTIVO',
+        ], $request->user());
+
+        $mensaje = $usuario->activo
+            ? "La cuenta de '{$usuario->nombre_completo}' ha sido habilitada nuevamente."
+            : "La cuenta de '{$usuario->nombre_completo}' ha sido deshabilitada.";
+
+        return redirect()->route('usuarios.index')->with('success', $mensaje);
     }
 }

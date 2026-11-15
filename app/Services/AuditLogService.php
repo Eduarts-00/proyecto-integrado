@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Storage;
 class AuditLogService
 {
     private const COLLECTION_PATH = 'mongodb_audit_logs.json';
+    private const TESTING_COLLECTION_PATH = 'mongodb_audit_logs_testing.json';
+
+    private function getCollectionPath(): string
+    {
+        return app()->environment('testing')
+            ? self::TESTING_COLLECTION_PATH
+            : self::COLLECTION_PATH;
+    }
 
     /**
      * Registra un documento inmutable de auditoría forense para autorización ISP (Capítulo 6.4).
@@ -19,7 +27,7 @@ class AuditLogService
         ?string $userAgent = null,
         string $terminalId = 'POS-BOX-01'
     ): array {
-        $timestamp = now()->toISOString();
+        $timestamp = now()->timezone(config('app.timezone', 'America/Santiago'))->toIso8601String();
         $ip = $ipOrigen ?? request()?->ip() ?? '192.168.10.15';
         $ua = $userAgent ?? request()?->userAgent() ?? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) FarmaNetPOS/2.4.1';
 
@@ -67,7 +75,7 @@ class AuditLogService
      */
     public function recordSecurityEvent(string $evento, array $detalles = [], ?User $user = null): array
     {
-        $timestamp = now()->toISOString();
+        $timestamp = now()->timezone(config('app.timezone', 'America/Santiago'))->toIso8601String();
         $ip = request()?->ip() ?? '192.168.10.15';
         $ua = request()?->userAgent() ?? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) FarmaNetPOS/2.4.1';
 
@@ -104,11 +112,12 @@ class AuditLogService
 
     public function getLogs(): array
     {
-        if (! Storage::disk('local')->exists(self::COLLECTION_PATH)) {
+        $path = $this->getCollectionPath();
+        if (! Storage::disk('local')->exists($path)) {
             return [];
         }
 
-        $raw = Storage::disk('local')->get(self::COLLECTION_PATH);
+        $raw = Storage::disk('local')->get($path);
         $decoded = json_decode($raw, true);
 
         return is_array($decoded) ? array_reverse($decoded) : [];
@@ -116,14 +125,15 @@ class AuditLogService
 
     public function clearLogs(): void
     {
-        Storage::disk('local')->put(self::COLLECTION_PATH, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        Storage::disk('local')->put($this->getCollectionPath(), json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 
     private function appendDocument(array $document): void
     {
+        $path = $this->getCollectionPath();
         $existing = [];
-        if (Storage::disk('local')->exists(self::COLLECTION_PATH)) {
-            $raw = Storage::disk('local')->get(self::COLLECTION_PATH);
+        if (Storage::disk('local')->exists($path)) {
+            $raw = Storage::disk('local')->get($path);
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) {
                 $existing = $decoded;
@@ -132,7 +142,7 @@ class AuditLogService
 
         $existing[] = $document;
         Storage::disk('local')->put(
-            self::COLLECTION_PATH,
+            $path,
             json_encode($existing, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
         );
     }

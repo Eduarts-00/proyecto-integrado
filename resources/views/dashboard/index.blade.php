@@ -21,7 +21,7 @@
             </a>
             <a href="{{ route('dashboard.export.excel') }}"
                class="px-4 py-2 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 transition">
-                📊 Exportar Excel
+                📊 Exportar Excel (.xlsx)
             </a>
         </div>
     </div>

@@ -21,6 +21,9 @@ class Batch extends Model
         'cantidad',
         'fecha_vencimiento',
         'fecha_ingreso',
+        'activo',
+        'motivo_baja',
+        'fecha_baja',
     ];
 
     protected function casts(): array
@@ -29,6 +32,8 @@ class Batch extends Model
             'cantidad' => 'integer',
             'fecha_vencimiento' => 'date',
             'fecha_ingreso' => 'date',
+            'activo' => 'boolean',
+            'fecha_baja' => 'datetime',
         ];
     }
 

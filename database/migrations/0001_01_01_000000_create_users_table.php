@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('codigo_rol', 40)->unique();
             $table->string('nombre_rol', 80);
             $table->string('descripcion', 255)->nullable();
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
 

@@ -22,6 +22,7 @@ return new class extends Migration
             $table->boolean('requiere_receta')->default(false);
             $table->boolean('tipo_controlado')->default(false);
             $table->unsignedInteger('stock_minimo')->default(10);
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
 
@@ -33,6 +34,7 @@ return new class extends Migration
             $table->integer('cantidad')->default(0);
             $table->date('fecha_vencimiento')->index();
             $table->date('fecha_ingreso');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
 
             $table->foreign('id_medicamento')
@@ -45,6 +47,8 @@ return new class extends Migration
             $table->increments('id_convenio');
             $table->string('nombre_convenio', 100);
             $table->decimal('porcentaje_descuento', 5, 2)->default(0);
+            $table->date('fecha_inicio')->nullable();
+            $table->date('fecha_fin')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamps();
         });
@@ -59,6 +63,7 @@ return new class extends Migration
             $table->decimal('iva', 12, 2)->default(0);
             $table->decimal('total', 12, 2);
             $table->string('estado', 30)->default('COMPLETADA');
+            $table->boolean('activo')->default(true);
             $table->timestamps();
 
             $table->foreign('id_usuario')
@@ -80,6 +85,7 @@ return new class extends Migration
             $table->integer('cantidad');
             $table->decimal('precio_unitario', 10, 2);
             $table->decimal('subtotal_linea', 12, 2);
+            $table->boolean('activo')->default(true);
             $table->timestamps();
 
             $table->foreign('id_venta')
@@ -116,6 +122,7 @@ return new class extends Migration
             $table->string('qf_signature', 150)->nullable();
             $table->char('hash_integridad', 64)->nullable();
             $table->text('datos_carro_json')->nullable();
+            $table->boolean('activo')->default(true);
             $table->timestamps();
 
             $table->foreign('id_detalle')

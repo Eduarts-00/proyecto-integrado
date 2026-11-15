@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
-@section('title', 'Autorización de Recetas Retenidas ISP — FarmaNet Pro')
+@section('title', 'Autorización de Recetas Retenidas — FarmaNet Pro')
 
 @section('content')
 <div class="space-y-6">
 
-    <!-- Cabecera Pantalla 4 con Indicadores en Vivo (Página 28) -->
+    <!-- Cabecera -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-xl font-bold text-slate-900">Autorización de Recetas Retenidas</h1>
             <p class="text-xs text-slate-500 mt-0.5">
-                Registro exigido por el ISP — Instituto de Salud Pública (Decreto Supremo N° 404)
+                Registro exigido por el ISP — Instituto de Salud Pública
             </p>
         </div>
 
@@ -72,7 +72,7 @@
 
         <!-- PANEL DE FORMULARIO DE CAPTURA OBLIGATORIA ISP -->
         <div class="lg:col-span-7">
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 min-h-[360px] flex flex-col justify-center">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 min-h-[340px] flex flex-col justify-center">
                 @if(!$selectedValidation)
                     <div class="text-center py-12">
                         <div class="text-4xl mb-3">⚖️</div>
@@ -84,13 +84,13 @@
                     <div class="border-b border-slate-200 pb-4 mb-5 flex items-center justify-between">
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-[#EF4444]">▲ CONTROLADO ISP</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-[#EF4444]">▲ CONTROLADO</span>
                                 <h3 class="text-base font-extrabold text-slate-900">
                                     {{ $selectedValidation->medicamento?->nombre_comercial }}
                                 </h3>
                             </div>
                             <p class="text-xs text-slate-500 mt-1">
-                                Solicitado por <strong>{{ $selectedValidation->vendedor?->nombre_completo }}</strong> • Lote sugerido FEFO:
+                                Solicitado por <strong>{{ $selectedValidation->vendedor?->nombre_completo }}</strong> • Lote asignado:
                                 <span class="font-mono-code font-semibold text-blue-700">{{ $selectedValidation->lote?->lote_codigo ?? 'LOT-2024-005' }}</span>
                             </p>
                         </div>
@@ -107,12 +107,12 @@
                             @csrf
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block font-bold text-slate-700 mb-1">RUN del Paciente (Módulo 11)</label>
+                                    <label class="block font-bold text-slate-700 mb-1">RUN del Paciente</label>
                                     <input type="text" name="rut_paciente" value="{{ $selectedValidation->rut_paciente }}" required
                                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono-code focus:border-[#1E40AF] outline-none">
                                 </div>
                                 <div>
-                                    <label class="block font-bold text-slate-700 mb-1">RUN Médico Prescriptor</label>
+                                    <label class="block font-bold text-slate-700 mb-1">RUN del Médico Prescriptor</label>
                                     <input type="text" name="rut_medico" value="{{ $selectedValidation->rut_medico }}" required
                                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono-code focus:border-[#1E40AF] outline-none">
                                 </div>
@@ -125,28 +125,24 @@
                                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono-code focus:border-[#1E40AF] outline-none">
                                 </div>
                                 <div>
-                                    <label class="block font-bold text-[#EF4444] mb-1">PIN Criptográfico Q.F. (Intransferible)</label>
+                                    <label class="block font-bold text-[#EF4444] mb-1">PIN de Autorización Q.F.</label>
                                     <input type="password" name="pin_qf" value="4421" required
-                                           placeholder="PIN Q.F.: 4421"
+                                           placeholder="Ingrese su PIN"
                                            class="w-full px-3.5 py-2.5 rounded-lg border-2 border-red-300 bg-red-50/40 font-mono-code font-bold text-center focus:border-[#EF4444] outline-none">
                                 </div>
-                            </div>
-
-                            <div class="p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
-                                🔐 <strong>Trazabilidad No-Repudio (STRIDE):</strong> Al autorizar, se genera una firma inmutable <code>SHA-256</code> vinculando el Folio, RUN del Q.F. ({{ auth()->user()->rut }}), timestamp atómico e IP, persistiendo en MySQL y MongoDB.
                             </div>
 
                             <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
                                 <button type="submit"
                                         class="px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition">
-                                    ✓ Autorizar, Firmar SHA-256 y Emitir Boleta
+                                    ✓ Autorizar Receta y Emitir Boleta
                                 </button>
                             </div>
                         </form>
 
-                        <form action="{{ route('autorizaciones.reject', $selectedValidation->id_registro) }}" method="POST" class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs">
+                        <form action="{{ route('autorizaciones.reject', $selectedValidation->id_registro) }}" method="POST" class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs">
                             @csrf
-                            <input type="text" name="motivo_rechazo" required placeholder="Motivo de rechazo sanitario (ej. Receta enmendada o vencida)"
+                            <input type="text" name="motivo_rechazo" required placeholder="Motivo de rechazo (ej. Receta enmendada o vencida)"
                                    class="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-xs">
                             <button type="submit" class="px-3.5 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-[#EF4444] font-bold">
                                 ✕ Rechazar Receta
@@ -154,7 +150,7 @@
                         </form>
                     @else
                         <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                            👁️ <strong>Modo Solo Lectura (RBAC Administrador):</strong> Solo el usuario con rol <strong>Químico Farmacéutico</strong> puede firmar y autorizar la salida de estupefacientes.
+                            👁️ <strong>Modo Consulta:</strong> Solo el <strong>Químico Farmacéutico</strong> titular o de turno está facultado para autorizar la dispensación de recetas retenidas.
                         </div>
                     @endif
                 @endif
@@ -163,14 +159,14 @@
 
     </div>
 
-    <!-- Libro Oficial Digital de Control ISP (Inmutable con Hash SHA-256) -->
+    <!-- Libro Oficial Digital de Control ISP -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
             <div>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    📖 Libro Digital Oficial de Control de Estupefacientes y Psicotrópicos (ISP)
+                    📖 Libro Oficial de Control de Estupefacientes y Psicotrópicos (ISP)
                 </h3>
-                <p class="text-[11px] text-slate-400">Actas inmutables selladas con firma SHA-256 del Director Técnico Q.F.</p>
+                <p class="text-[11px] text-slate-400">Registro histórico de dispensación de medicamentos sometidos a control sanitario</p>
             </div>
             <span class="px-2.5 py-1 rounded bg-slate-200 text-slate-700 font-mono-code text-[10px] font-bold">
                 DECRETO SUPREMO N° 404
@@ -187,7 +183,7 @@
                         <th class="py-3 px-4">RUN Médico</th>
                         <th class="py-3 px-4">Q.F. Autorizador</th>
                         <th class="py-3 px-4">Estado</th>
-                        <th class="py-3 px-4">Firma SHA-256 (No-Repudio)</th>
+                        <th class="py-3 px-4">Sello de Verificación</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
@@ -215,7 +211,7 @@
                             <td class="py-3 px-4 font-mono-code text-[10px] text-slate-500">
                                 @if($acta->hash_integridad)
                                     <span title="{{ $acta->hash_integridad }}" class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                                        {{ substr($acta->hash_integridad, 0, 24) }}...
+                                        {{ $acta->qf_signature ?? substr($acta->hash_integridad, 0, 16) }}
                                     </span>
                                 @else
                                     <span class="text-slate-400">{{ $acta->motivo_rechazo ?? '—' }}</span>
@@ -225,7 +221,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="py-8 text-center text-slate-400 text-xs">
-                                Aún no se han firmado actas en la sesión actual. Aprueba una receta de la cola superior para generar el sello SHA-256.
+                                Aún no se registran autorizaciones en esta jornada.
                             </td>
                         </tr>
                     @endforelse
