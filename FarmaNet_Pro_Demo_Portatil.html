@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmaNet Pro — Demo Interactiva Portátil (Farmacia Privada)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #0F172A; }
+        .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+        @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+        .animate-pulse-badge { animation: pulse-fast 1.6s infinite; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
+
+<!-- PANTALLA LOGIN -->
+<div id="login-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-[#0F172A] to-blue-950">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden">
+        <div class="bg-[#0F172A] text-white p-6 text-center border-b border-slate-800">
+            <div class="w-12 h-12 rounded-xl bg-[#1E40AF] mx-auto flex items-center justify-center font-extrabold text-xl shadow-inner mb-3">Rx</div>
+            <h1 class="text-lg font-extrabold tracking-tight">FarmaNet Pro</h1>
+            <p class="text-xs text-slate-400 mt-0.5">Sistema de Gestión Farmacéutica Privada</p>
+        </div>
+        <div class="p-6 space-y-4 text-xs">
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">RUN o Correo Institucional</label>
+                <input type="text" id="login-rut" value="10.111.222-3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono-code">
+            </div>
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Contraseña</label>
+                <input type="password" value="Password123!" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300">
+            </div>
+            <button onclick="loginWithRole('administrador')" class="w-full py-2.5 rounded-xl bg-[#1E40AF] hover:bg-blue-800 text-white font-bold shadow-sm transition">
+                Ingresar al Sistema
+            </button>
+
+            <div class="pt-3 border-t border-slate-200">
+                <p class="text-[11px] font-bold uppercase text-slate-400 mb-2 text-center">Acceso Rápido por Rol (Demo Portátil)</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="loginWithRole('administrador')" class="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 font-bold text-left transition">
+                        <div>👑 Administrador</div>
+                        <div class="text-[10px] font-normal text-purple-700">María Salinas</div>
+                    </button>
+                    <button onclick="loginWithRole('quimico_farmaceutico')" class="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-bold text-left transition">
+                        <div>🧪 Q. Farmacéutico</div>
+                        <div class="text-[10px] font-normal text-emerald-700">Dr. Carlos Vega (PIN: 4421)</div>
+                    </button>
+                    <button onclick="loginWithRole('bodeguero')" class="p-2.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-left transition">
+                        <div>📦 Bodeguero</div>
+                        <div class="text-[10px] font-normal text-amber-700">Pedro Morales</div>
+                    </button>
+                    <button onclick="loginWithRole('vendedor')" class="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-left transition">
+                        <div>🛒 Vendedor</div>
+                        <div class="text-[10px] font-normal text-blue-700">Juan Pérez</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- APLICACIÓN PRINCIPAL -->
+<div id="app-shell" class="min-h-screen flex flex-col lg:flex-row">
+    <!-- Sidebar -->
+    <aside class="w-full lg:w-64 lg:sticky lg:top-0 lg:h-screen bg-[#0F172A] text-white shrink-0 flex flex-col justify-between border-r border-slate-800 overflow-y-auto">
+        <div>
+            <div class="p-5 flex items-center gap-3 border-b border-slate-800/80">
+                <div class="w-9 h-9 rounded-lg bg-[#1E40AF] flex items-center justify-center font-extrabold text-white shadow-inner">Rx</div>
+                <div>
+                    <h1 class="font-bold text-sm tracking-tight text-white">FarmaNet Pro</h1>
+                    <p class="text-[11px] text-slate-400">Sistema de Farmacia</p>
+                </div>
+            </div>
+
+            <!-- Perfil Activo -->
+            <div class="p-3.5 mx-3 my-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                <div class="flex items-center gap-3">
+                    <div id="user-avatar" class="w-9 h-9 rounded-full bg-[#1E40AF] flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">M</div>
+                    <div class="overflow-hidden flex-1">
+                        <p id="user-name" class="font-semibold text-xs text-white truncate">María Salinas</p>
+                        <p id="user-rut" class="text-[10px] text-slate-400 font-mono-code">10.111.222-3</p>
+                    </div>
+                </div>
+                <div class="mt-2.5 flex items-center justify-between gap-2">
+                    <span id="user-role-badge" class="inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-md border bg-purple-600/30 text-purple-300 border-purple-400/30">
+                        Administrador
+                    </span>
+                    <button onclick="showLoginScreen()" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-500/15 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-[10px] font-semibold transition">
+                        ↪ Salir
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navegación -->
+            <div class="px-3 py-2">
+                <p class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Módulos</p>
+                <nav id="sidebar-nav" class="space-y-1"></nav>
+            </div>
+        </div>
+
+        <!-- Cambiar Perfil Rápido -->
+        <div class="p-4 border-t border-slate-800 text-xs space-y-3">
+            <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                <p class="text-[10px] font-semibold uppercase text-slate-400 mb-1.5">Cambiar Perfil (Demo)</p>
+                <div class="grid grid-cols-2 gap-1">
+                    <button onclick="loginWithRole('vendedor')" id="role-btn-vendedor" class="w-full text-left px-2 py-1 rounded text-[10px] bg-slate-800 text-slate-300 hover:bg-slate-700">Vendedor</button>
+                    <button onclick="loginWithRole('quimico_farmaceutico')" id="role-btn-quimico_farmaceutico" class="w-full text-left px-2 py-1 rounded text-[10px] bg-slate-800 text-slate-300 hover:bg-slate-700">Q. Farmacéutico</button>
+                    <button onclick="loginWithRole('bodeguero')" id="role-btn-bodeguero" class="w-full text-left px-2 py-1 rounded text-[10px] bg-slate-800 text-slate-300 hover:bg-slate-700">Bodeguero</button>
+                    <button onclick="loginWithRole('administrador')" id="role-btn-administrador" class="w-full text-left px-2 py-1 rounded text-[10px] bg-purple-600 text-white font-semibold">Administrador</button>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                <span>v2.4.1 (Portátil)</span>
+                <span>ISP Reg. #4421</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contenedor Principal -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Top Status Bar -->
+        <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-2.5 flex items-center justify-between text-xs text-slate-500">
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                    Sistema en línea
+                </span>
+                <span class="text-slate-300">|</span>
+                <span id="live-clock" class="font-mono-code text-slate-500"></span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="navigate('autorizaciones')" id="top-pending-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[#EF4444] font-semibold text-[11px] animate-pulse-badge">
+                    ⚠️ <span id="top-pending-count">1</span> Receta(s) Pendiente(s)
+                </button>
+                <span class="hidden sm:inline font-mono-code text-slate-400">ISP Reg. #4421</span>
+                <span class="hidden sm:inline text-slate-200">|</span>
+                <button onclick="showLoginScreen()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-bold text-xs transition shadow-sm">
+                    <span>↪</span>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Toast Alert -->
+        <div id="toast-container" class="px-6 pt-4 empty:hidden"></div>
+
+        <!-- Contenido Dinámico -->
+        <main id="main-content" class="flex-1 p-6"></main>
+    </div>
+</div>
+
+<!-- MODAL UNIVERSAL -->
+<div id="app-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div id="app-modal-body" class="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-xl overflow-hidden"></div>
+</div>
+
+<script>
+const DB = {"medications":[{"id_medicamento":57,"codigo_barras":"780000100157","nombre_comercial":"Aciclovir 400mg","principio_activo":"Aciclovir","laboratorio":"Laboratorio Chile","categoria":"Antiviral","precio_unitario":9990,"requiere_receta":false,"activo":true,"stock_vitrina":45,"stock_bodega":90},{"id_medicamento":17,"codigo_barras":"780000100117","nombre_comercial":"Ácido Acetilsalicílico 100mg (Cardioaspirina)","principio_activo":"Ácido Acetilsalicílico","laboratorio":"Bayer","categoria":"Cardiovascular \/ Antiagregante","precio_unitario":5990,"requiere_receta":false,"activo":true,"stock_vitrina":110,"stock_bodega":200},{"id_medicamento":21,"codigo_barras":"780000100121","nombre_comercial":"Ácido Mefenámico 500mg (Tanston)","principio_activo":"Ácido Mefenámico","laboratorio":"Pfizer","categoria":"Analgésico Ginecológico","precio_unitario":4790,"requiere_receta":false,"activo":true,"stock_vitrina":65,"stock_bodega":110},{"id_medicamento":65,"codigo_barras":"780000100165","nombre_comercial":"Alprazolam 0.5mg (Tranquinal)","principio_activo":"Alprazolam","laboratorio":"Bagó","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":9890,"requiere_receta":true,"activo":true,"stock_vitrina":40,"stock_bodega":80},{"id_medicamento":41,"codigo_barras":"780000100141","nombre_comercial":"Amlodipino 10mg","principio_activo":"Amlodipino Besilato","laboratorio":"Saval","categoria":"Cardiovascular GES","precio_unitario":5290,"requiere_receta":false,"activo":true,"stock_vitrina":90,"stock_bodega":180},{"id_medicamento":52,"codigo_barras":"780000100152","nombre_comercial":"Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","principio_activo":"Amoxicilina + Ácido Clavulánico","laboratorio":"Saval","categoria":"Antibiótico","precio_unitario":13990,"requiere_receta":false,"activo":true,"stock_vitrina":65,"stock_bodega":130},{"id_medicamento":6,"codigo_barras":"780000100106","nombre_comercial":"Amoxicilina 500mg","principio_activo":"Amoxicilina Trihidrato","laboratorio":"Bagó","categoria":"Antibiótico","precio_unitario":6990,"requiere_receta":false,"activo":true,"stock_vitrina":60,"stock_bodega":0},{"id_medicamento":42,"codigo_barras":"780000100142","nombre_comercial":"Atenolol 50mg","principio_activo":"Atenolol","laboratorio":"Mintlab","categoria":"Cardiovascular GES","precio_unitario":3490,"requiere_receta":false,"activo":true,"stock_vitrina":80,"stock_bodega":160},{"id_medicamento":10,"codigo_barras":"780000100110","nombre_comercial":"Atorvastatina 20mg","principio_activo":"Atorvastatina Cálcica","laboratorio":"Pfizer","categoria":"Hipolipemiante GES","precio_unitario":8290,"requiere_receta":false,"activo":true,"stock_vitrina":0,"stock_bodega":120},{"id_medicamento":11,"codigo_barras":"780000100111","nombre_comercial":"Azitromicina 500mg","principio_activo":"Azitromicina","laboratorio":"Andrómaco","categoria":"Antibiótico","precio_unitario":9490,"requiere_receta":false,"activo":true,"stock_vitrina":0,"stock_bodega":80},{"id_medicamento":73,"codigo_barras":"780000100173","nombre_comercial":"Betametasona Crema Dérmica 0.05% (30g)","principio_activo":"Betametasona Dipropionato","laboratorio":"Laboratorio Chile","categoria":"Dermatología","precio_unitario":4490,"requiere_receta":false,"activo":true,"stock_vitrina":70,"stock_bodega":140},{"id_medicamento":31,"codigo_barras":"780000100131","nombre_comercial":"Bromhexina Jarabe Adulto 8mg\/5ml","principio_activo":"Bromhexina Clorhidrato","laboratorio":"Laboratorio Chile","categoria":"Mucolítico OTC","precio_unitario":4290,"requiere_receta":false,"activo":true,"stock_vitrina":65,"stock_bodega":120},{"id_medicamento":23,"codigo_barras":"780000100123","nombre_comercial":"Budesonida Inhalador 200mcg","principio_activo":"Budesonida","laboratorio":"Laboratorio Chile","categoria":"Respiratorio GES","precio_unitario":11990,"requiere_receta":false,"activo":true,"stock_vitrina":50,"stock_bodega":100},{"id_medicamento":76,"codigo_barras":"780000100176","nombre_comercial":"Calcio + Vitamina D3 800 UI (Elcal-D)","principio_activo":"Carbonato de Calcio + Colecalciferol","laboratorio":"Andrómaco","categoria":"Vitaminas y Minerales","precio_unitario":12490,"requiere_receta":false,"activo":true,"stock_vitrina":65,"stock_bodega":130},{"id_medicamento":43,"codigo_barras":"780000100143","nombre_comercial":"Carvedilol 25mg (Dualten)","principio_activo":"Carvedilol","laboratorio":"Saval","categoria":"Cardiovascular GES","precio_unitario":8990,"requiere_receta":false,"activo":true,"stock_vitrina":65,"stock_bodega":130},{"id_medicamento":54,"codigo_barras":"780000100154","nombre_comercial":"Cefadroxilo 500mg","principio_activo":"Cefadroxilo Monohidrato","laboratorio":"Andrómaco","categoria":"Antibiótico","precio_unitario":10490,"requiere_receta":false,"activo":true,"stock_vitrina":55,"stock_bodega":110},{"id_medicamento":20,"codigo_barras":"780000100120","nombre_comercial":"Celecoxib 200mg (Celebra)","principio_activo":"Celecoxib","laboratorio":"Pfizer","categoria":"Antiinflamatorio Articular","precio_unitario":12990,"requiere_receta":false,"activo":true,"stock_vitrina":45,"stock_bodega":80},{"id_medicamento":26,"codigo_barras":"780000100126","nombre_comercial":"Cetirizina 10mg (Rigotax)","principio_activo":"Cetirizina Diclorhidrato","laboratorio":"Recalcine","categoria":"Antialérgico OTC","precio_unitario":5490,"requiere_receta":false,"activo":true,"stock_vitrina":90,"stock_bodega":160},{"id_medicamento":53,"codigo_barras":"780000100153","nombre_comercial":"Ciprofloxacino 500mg","principio_activo":"Ciprofloxacino Clorhidrato","laboratorio":"Laboratorio Chile","categoria":"Antibiótico","precio_unitario":7890,"requiere_receta":false,"activo":true,"stock_vitrina":70,"stock_bodega":140},{"id_medicamento":55,"codigo_barras":"780000100155","nombre_comercial":"Claritromicina 500mg (Preclar)","principio_activo":"Claritromicina","laboratorio":"Abbott","categoria":"Antibiótico","precio_unitario":12990,"requiere_receta":false,"activo":true,"stock_vitrina":50,"stock_bodega":100},{"id_medicamento":3,"codigo_barras":"780000100103","nombre_comercial":"Clonazepam 2mg","principio_activo":"Clonazepam","laboratorio":"Roche","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":14990,"requiere_receta":true,"activo":true,"stock_vitrina":0,"stock_bodega":0},{"id_medicamento":47,"codigo_barras":"780000100147","nombre_comercial":"Clopidogrel 75mg","principio_activo":"Clopidogrel Bisulfato","laboratorio":"Sanofi","categoria":"Cardiovascular GES","precio_unitario":11490,"requiere_receta":false,"activo":true,"stock_vitrina":50,"stock_bodega":100},{"id_medicamento":29,"codigo_barras":"780000100129","nombre_comercial":"Clorfenamina Maleato 4mg","principio_activo":"Clorfenamina Maleato","laboratorio":"Mintlab","categoria":"Antialérgico OTC","precio_unitario":1990,"requiere_receta":false,"activo":true,"stock_vitrina":150,"stock_bodega":300},{"id_medicamento":67,"codigo_barras":"780000100167","nombre_comercial":"Clotiazepam 5mg (Rize)","principio_activo":"Clotiazepam","laboratorio":"Recalcine","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":15490,"requiere_receta":true,"activo":true,"stock_vitrina":35,"stock_bodega":70},{"id_medicamento":74,"codigo_barras":"780000100174","nombre_comercial":"Clotrimazol Crema Tópica 1% (Canesten)","principio_activo":"Clotrimazol","laboratorio":"Bayer","categoria":"Dermatología OTC","precio_unitario":4290,"requiere_receta":false,"activo":true,"stock_vitrina":85,"stock_bodega":160},{"id_medicamento":70,"codigo_barras":"780000100170","nombre_comercial":"Codeína + Paracetamol 30\/500mg (Codetol)","principio_activo":"Codeína Fosfato + Paracetamol","laboratorio":"Saval","categoria":"Estupefaciente (Receta Retenida ISP)","precio_unitario":13490,"requiere_receta":true,"activo":true,"stock_vitrina":25,"stock_bodega":50},{"id_medicamento":77,"codigo_barras":"780000100177","nombre_comercial":"Complejo Vitamínico B1-B6-B12 (Neurobionta)","principio_activo":"Tiamina + Piridoxina + Cianocobalamina","laboratorio":"Merck","categoria":"Vitaminas y Minerales","precio_unitario":13990,"requiere_receta":false,"activo":true,"stock_vitrina":75,"stock_bodega":140},{"id_medicamento":25,"codigo_barras":"780000100125","nombre_comercial":"Desloratadina 5mg (Neolar)","principio_activo":"Desloratadina","laboratorio":"Saval","categoria":"Antialérgico","precio_unitario":6990,"requiere_receta":false,"activo":true,"stock_vitrina":75,"stock_bodega":140},{"id_medicamento":66,"codigo_barras":"780000100166","nombre_comercial":"Diazepam 10mg","principio_activo":"Diazepam","laboratorio":"Laboratorio Chile","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":5990,"requiere_receta":true,"activo":true,"stock_vitrina":30,"stock_bodega":60},{"id_medicamento":16,"codigo_barras":"780000100116","nombre_comercial":"Diclofenaco Sódico 50mg (Lertus)","principio_activo":"Diclofenaco Sódico","laboratorio":"Recalcine","categoria":"Antiinflamatorio","precio_unitario":4890,"requiere_receta":false,"activo":true,"stock_vitrina":70,"stock_bodega":120},{"id_medicamento":34,"codigo_barras":"780000100134","nombre_comercial":"Domperidona 10mg (Idon)","principio_activo":"Domperidona","laboratorio":"Saval","categoria":"Gastroenterología","precio_unitario":5290,"requiere_receta":false,"activo":true,"stock_vitrina":60,"stock_bodega":110},{"id_medicamento":71,"codigo_barras":"780000100171","nombre_comercial":"Drospirenona + Etinilestradiol (Vexa CD)","principio_activo":"Drospirenona 3mg + Etinilestradiol 0.02mg","laboratorio":"Abbott","categoria":"Ginecología \/ Anticonceptivo","precio_unitario":13990,"requiere_receta":false,"activo":true,"stock_vitrina":80,"stock_bodega":160},{"id_medicamento":39,"codigo_barras":"780000100139","nombre_comercial":"Enalapril Maleato 20mg","principio_activo":"Enalapril Maleato","laboratorio":"Laboratorio Chile","categoria":"Cardiovascular GES","precio_unitario":3990,"requiere_receta":false,"activo":true,"stock_vitrina":115,"stock_bodega":230},{"id_medicamento":59,"codigo_barras":"780000100159","nombre_comercial":"Escitalopram 10mg (Celtium)","principio_activo":"Escitalopram Oxalato","laboratorio":"Saval","categoria":"Salud Mental GES","precio_unitario":13990,"requiere_receta":false,"activo":true,"stock_vitrina":65,"stock_bodega":130},{"id_medicamento":32,"codigo_barras":"780000100132","nombre_comercial":"Esomeprazol 40mg (Esoprazol)","principio_activo":"Esomeprazol Magnésico","laboratorio":"Saval","categoria":"Gastroenterología","precio_unitario":12490,"requiere_receta":false,"activo":true,"stock_vitrina":70,"stock_bodega":140},{"id_medicamento":33,"codigo_barras":"780000100133","nombre_comercial":"Famotidina 40mg","principio_activo":"Famotidina","laboratorio":"Laboratorio Chile","categoria":"Gastroenterología OTC","precio_unitario":3890,"requiere_receta":false,"activo":true,"stock_vitrina":85,"stock_bodega":150},{"id_medicamento":69,"codigo_barras":"780000100169","nombre_comercial":"Fentermina 37.5mg (Sentis)","principio_activo":"Fentermina Clorhidrato","laboratorio":"Laboratorio Chile","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":29990,"requiere_receta":true,"activo":true,"stock_vitrina":20,"stock_bodega":45},{"id_medicamento":56,"codigo_barras":"780000100156","nombre_comercial":"Fluconazol 150mg","principio_activo":"Fluconazol","laboratorio":"Mintlab","categoria":"Antimicótico","precio_unitario":4990,"requiere_receta":false,"activo":true,"stock_vitrina":75,"stock_bodega":150},{"id_medicamento":60,"codigo_barras":"780000100160","nombre_comercial":"Fluoxetina 20mg","principio_activo":"Fluoxetina Clorhidrato","laboratorio":"Laboratorio Chile","categoria":"Salud Mental GES","precio_unitario":4990,"requiere_receta":false,"activo":true,"stock_vitrina":85,"stock_bodega":170},{"id_medicamento":44,"codigo_barras":"780000100144","nombre_comercial":"Furosemida 40mg","principio_activo":"Furosemida","laboratorio":"Laboratorio Chile","categoria":"Cardiovascular GES","precio_unitario":2890,"requiere_receta":false,"activo":true,"stock_vitrina":85,"stock_bodega":170},{"id_medicamento":49,"codigo_barras":"780000100149","nombre_comercial":"Glibenclamida 5mg","principio_activo":"Glibenclamida","laboratorio":"Laboratorio Chile","categoria":"Antidiabético GES","precio_unitario":2990,"requiere_receta":false,"activo":true,"stock_vitrina":80,"stock_bodega":160},{"id_medicamento":45,"codigo_barras":"780000100145","nombre_comercial":"Hidroclorotiazida 50mg","principio_activo":"Hidroclorotiazida","laboratorio":"Mintlab","categoria":"Cardiovascular GES","precio_unitario":2690,"requiere_receta":false,"activo":true,"stock_vitrina":95,"stock_bodega":190},{"id_medicamento":8,"codigo_barras":"780000100108","nombre_comercial":"Ibuprofeno 400mg","principio_activo":"Ibuprofeno","laboratorio":"Chile","categoria":"Antiinflamatorio OTC","precio_unitario":3290,"requiere_receta":false,"activo":true,"stock_vitrina":320,"stock_bodega":0},{"id_medicamento":13,"codigo_barras":"780000100113","nombre_comercial":"Ibuprofeno 600mg","principio_activo":"Ibuprofeno","laboratorio":"Laboratorio Chile","categoria":"Antiinflamatorio","precio_unitario":4490,"requiere_receta":false,"activo":true,"stock_vitrina":95,"stock_bodega":180},{"id_medicamento":14,"codigo_barras":"780000100114","nombre_comercial":"Ketoprofeno 100mg (Profenid)","principio_activo":"Ketoprofeno","laboratorio":"Sanofi","categoria":"Antiinflamatorio","precio_unitario":6990,"requiere_receta":false,"activo":true,"stock_vitrina":60,"stock_bodega":100},{"id_medicamento":18,"codigo_barras":"780000100118","nombre_comercial":"Ketorolaco 10mg Sublingual (Syndol)","principio_activo":"Ketorolaco Trometamol","laboratorio":"Saval","categoria":"Analgésico Agudo","precio_unitario":6290,"requiere_receta":false,"activo":true,"stock_vitrina":55,"stock_bodega":90},{"id_medicamento":75,"codigo_barras":"780000100175","nombre_comercial":"Lágrimas Artificiales Hialuronato 0.2% (10ml)","principio_activo":"Hialuronato de Sodio","laboratorio":"Saval","categoria":"Oftalmología OTC","precio_unitario":10990,"requiere_receta":false,"activo":true,"stock_vitrina":60,"stock_bodega":120},{"id_medicamento":27,"codigo_barras":"780000100127","nombre_comercial":"Levocetirizina 5mg (Degraler)","principio_activo":"Levocetirizina","laboratorio":"Bagó","categoria":"Antialérgico","precio_unitario":8490,"requiere_receta":false,"activo":true,"stock_vitrina":60,"stock_bodega":110},{"id_medicamento":51,"codigo_barras":"780000100151","nombre_comercial":"Levotiroxina Sódica 100mcg (Eutirox)","principio_activo":"Levotiroxina Sódica","laboratorio":"Merck","categoria":"Endocrinología GES","precio_unitario":8990,"requiere_receta":false,"activo":true,"stock_vitrina":95,"stock_bodega":190},{"id_medicamento":36,"codigo_barras":"780000100136","nombre_comercial":"Loperamida 2mg","principio_activo":"Loperamida Clorhidrato","laboratorio":"Mintlab","categoria":"Gastroenterología OTC","precio_unitario":2590,"requiere_receta":false,"activo":true,"stock_vitrina":100,"stock_bodega":190},{"id_medicamento":24,"codigo_barras":"780000100124","nombre_comercial":"Loratadina 10mg","principio_activo":"Loratadina","laboratorio":"Mintlab","categoria":"Antialérgico OTC","precio_unitario":2790,"requiere_receta":false,"activo":true,"stock_vitrina":140,"stock_bodega":300},{"id_medicamento":5,"codigo_barras":"780000100105","nombre_comercial":"Lorazepam 1mg","principio_activo":"Lorazepam","laboratorio":"Wyeth","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":11990,"requiere_receta":true,"activo":true,"stock_vitrina":0,"stock_bodega":0},{"id_medicamento":7,"codigo_barras":"780000100107","nombre_comercial":"Losartán 50mg","principio_activo":"Losartán Potásico","laboratorio":"Gador","categoria":"Cardiovascular","precio_unitario":7490,"requiere_receta":false,"activo":true,"stock_vitrina":95,"stock_bodega":0},{"id_medicamento":19,"codigo_barras":"780000100119","nombre_comercial":"Metamizol Sódico 300mg (Dipirona)","principio_activo":"Metamizol Sódico","laboratorio":"Laboratorio Chile","categoria":"Analgésico \/ Antipirético","precio_unitario":2990,"requiere_receta":false,"activo":true,"stock_vitrina":130,"stock_bodega":250},{"id_medicamento":48,"codigo_barras":"780000100148","nombre_comercial":"Metformina 1000mg XR (Glafornil XR)","principio_activo":"Metformina Clorhidrato Liberación Prolongada","laboratorio":"Merck","categoria":"Antidiabético GES","precio_unitario":10990,"requiere_receta":false,"activo":true,"stock_vitrina":75,"stock_bodega":150},{"id_medicamento":9,"codigo_barras":"780000100109","nombre_comercial":"Metformina 850mg","principio_activo":"Metformina Clorhidrato","laboratorio":"Saval","categoria":"Antidiabético GES","precio_unitario":5490,"requiere_receta":false,"activo":true,"stock_vitrina":0,"stock_bodega":150},{"id_medicamento":68,"codigo_barras":"780000100168","nombre_comercial":"Metilfenidato 10mg (Aradix)","principio_activo":"Metilfenidato Clorhidrato","laboratorio":"Laboratorio Chile","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":22990,"requiere_receta":true,"activo":true,"stock_vitrina":25,"stock_bodega":50},{"id_medicamento":28,"codigo_barras":"780000100128","nombre_comercial":"Montelukast 10mg (Aireal)","principio_activo":"Montelukast Sódico","laboratorio":"Saval","categoria":"Respiratorio GES","precio_unitario":13490,"requiere_receta":false,"activo":true,"stock_vitrina":45,"stock_bodega":90},{"id_medicamento":15,"codigo_barras":"780000100115","nombre_comercial":"Naproxeno Sódico 550mg (Eurogesic)","principio_activo":"Naproxeno Sódico","laboratorio":"Saval","categoria":"Antiinflamatorio OTC","precio_unitario":5490,"requiere_receta":false,"activo":true,"stock_vitrina":85,"stock_bodega":150},{"id_medicamento":2,"codigo_barras":"780000100102","nombre_comercial":"Omeprazol 20mg","principio_activo":"Omeprazol","laboratorio":"AstraZeneca","categoria":"Gastroenterología","precio_unitario":4500,"requiere_receta":false,"activo":true,"stock_vitrina":0,"stock_bodega":0},{"id_medicamento":12,"codigo_barras":"780000100112","nombre_comercial":"Paracetamol 1g (Kitadol Forte)","principio_activo":"Paracetamol","laboratorio":"Mintlab","categoria":"Analgésico OTC","precio_unitario":3990,"requiere_receta":false,"activo":true,"stock_vitrina":120,"stock_bodega":240},{"id_medicamento":4,"codigo_barras":"780000100104","nombre_comercial":"Paracetamol 500mg","principio_activo":"Paracetamol","laboratorio":"Mintlab","categoria":"Analgésico OTC","precio_unitario":2490,"requiere_receta":false,"activo":true,"stock_vitrina":0,"stock_bodega":500},{"id_medicamento":37,"codigo_barras":"780000100137","nombre_comercial":"Perenteryl 250mg (Probiótico)","principio_activo":"Saccharomyces boulardii","laboratorio":"Merck","categoria":"Gastroenterología OTC","precio_unitario":9890,"requiere_receta":false,"activo":true,"stock_vitrina":50,"stock_bodega":95},{"id_medicamento":62,"codigo_barras":"780000100162","nombre_comercial":"Pregabalina 75mg (Pregobin)","principio_activo":"Pregabalina","laboratorio":"Saval","categoria":"Neurología \/ Dolor Neuropático","precio_unitario":14990,"requiere_receta":false,"activo":true,"stock_vitrina":55,"stock_bodega":110},{"id_medicamento":61,"codigo_barras":"780000100161","nombre_comercial":"Quetiapina 25mg (Quetidin)","principio_activo":"Quetiapina Fumarato","laboratorio":"Recalcine","categoria":"Neurología \/ Psiquiatría","precio_unitario":10990,"requiere_receta":false,"activo":true,"stock_vitrina":50,"stock_bodega":100},{"id_medicamento":46,"codigo_barras":"780000100146","nombre_comercial":"Rosuvastatina 20mg (Crestor)","principio_activo":"Rosuvastatina Cálcica","laboratorio":"AstraZeneca","categoria":"Hipolipemiante GES","precio_unitario":15990,"requiere_receta":false,"activo":true,"stock_vitrina":55,"stock_bodega":110},{"id_medicamento":22,"codigo_barras":"780000100122","nombre_comercial":"Salbutamol Inhalador 100mcg (Aerolin)","principio_activo":"Salbutamol Sulfato","laboratorio":"GSK","categoria":"Respiratorio GES","precio_unitario":6490,"requiere_receta":false,"activo":true,"stock_vitrina":80,"stock_bodega":160},{"id_medicamento":58,"codigo_barras":"780000100158","nombre_comercial":"Sertralina 50mg (Altruline)","principio_activo":"Sertralina Clorhidrato","laboratorio":"Pfizer","categoria":"Salud Mental GES","precio_unitario":9490,"requiere_receta":false,"activo":true,"stock_vitrina":70,"stock_bodega":140},{"id_medicamento":50,"codigo_barras":"780000100150","nombre_comercial":"Sitagliptina 100mg (Januvia)","principio_activo":"Sitagliptina Fosfato","laboratorio":"MSD","categoria":"Antidiabético","precio_unitario":28990,"requiere_receta":false,"activo":true,"stock_vitrina":30,"stock_bodega":60},{"id_medicamento":72,"codigo_barras":"780000100172","nombre_comercial":"Tamsulosina 0.4mg (Secotex)","principio_activo":"Tamsulosina Clorhidrato","laboratorio":"Boehringer Ingelheim","categoria":"Urología GES","precio_unitario":14490,"requiere_receta":false,"activo":true,"stock_vitrina":55,"stock_bodega":110},{"id_medicamento":30,"codigo_barras":"780000100130","nombre_comercial":"Tapsin Compuesto Día\/Noche","principio_activo":"Paracetamol + Noscapina + Cafeína + Clorfenamina","laboratorio":"Maverick","categoria":"Antigripal OTC","precio_unitario":5890,"requiere_receta":false,"activo":true,"stock_vitrina":110,"stock_bodega":220},{"id_medicamento":1,"codigo_barras":"780000100101","nombre_comercial":"Tramadol 50mg","principio_activo":"Tramadol Clorhidrato","laboratorio":"Grünenthal","categoria":"Analgésico Opioide (Controlado)","precio_unitario":8990,"requiere_receta":true,"activo":true,"stock_vitrina":0,"stock_bodega":100},{"id_medicamento":38,"codigo_barras":"780000100138","nombre_comercial":"Trimebutino Maleato 200mg (Debridat)","principio_activo":"Trimebutino Maleato","laboratorio":"Pfizer","categoria":"Gastroenterología","precio_unitario":8690,"requiere_receta":false,"activo":true,"stock_vitrina":55,"stock_bodega":100},{"id_medicamento":40,"codigo_barras":"780000100140","nombre_comercial":"Valsartán 160mg (Tareg)","principio_activo":"Valsartán","laboratorio":"Novartis","categoria":"Cardiovascular GES","precio_unitario":14490,"requiere_receta":false,"activo":true,"stock_vitrina":60,"stock_bodega":120},{"id_medicamento":35,"codigo_barras":"780000100135","nombre_comercial":"Viadil Compuesto Gotas 15ml","principio_activo":"Pargeverina Clorhidrato + Metamizol","laboratorio":"Sidus","categoria":"Antiespasmódico OTC","precio_unitario":6790,"requiere_receta":false,"activo":true,"stock_vitrina":75,"stock_bodega":130},{"id_medicamento":63,"codigo_barras":"780000100163","nombre_comercial":"Zolpidem 10mg (Sucedal)","principio_activo":"Zolpidem Tartrato","laboratorio":"Recalcine","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":12490,"requiere_receta":true,"activo":true,"stock_vitrina":35,"stock_bodega":70},{"id_medicamento":64,"codigo_barras":"780000100164","nombre_comercial":"Zopiclona 7.5mg (Losopil)","principio_activo":"Zopiclona","laboratorio":"Saval","categoria":"Psicotrópico (Receta Retenida ISP)","precio_unitario":10990,"requiere_receta":true,"activo":true,"stock_vitrina":30,"stock_bodega":60}],"batches":[{"id_lote":1,"id_medicamento":1,"medicamento":"Tramadol 50mg","laboratorio":"Grünenthal","requiere_receta":true,"lote_codigo":"LOT-2024-013","ubicacion":"VITRINA","cantidad":25,"fecha_vencimiento":"10-11-2026","fecha_vencimiento_iso":"2026-11-10","dias_restantes":-5,"semaforo_fefo":"vencido","activo":false,"motivo_baja":null},{"id_lote":2,"id_medicamento":2,"medicamento":"Omeprazol 20mg","laboratorio":"AstraZeneca","requiere_receta":false,"lote_codigo":"LOT-2024-010","ubicacion":"VITRINA","cantidad":180,"fecha_vencimiento":"13-11-2026","fecha_vencimiento_iso":"2026-11-13","dias_restantes":-2,"semaforo_fefo":"vencido","activo":false,"motivo_baja":null},{"id_lote":3,"id_medicamento":3,"medicamento":"Clonazepam 2mg","laboratorio":"Roche","requiere_receta":true,"lote_codigo":"LOT-2024-005","ubicacion":"VITRINA","cantidad":29,"fecha_vencimiento":"20-11-2026","fecha_vencimiento_iso":"2026-11-20","dias_restantes":5,"semaforo_fefo":"critico","activo":false,"motivo_baja":"Retiro Preventivo por Vencimiento Próximo (< 30 días)"},{"id_lote":4,"id_medicamento":4,"medicamento":"Paracetamol 500mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2024-003","ubicacion":"VITRINA","cantidad":200,"fecha_vencimiento":"25-11-2026","fecha_vencimiento_iso":"2026-11-25","dias_restantes":10,"semaforo_fefo":"critico","activo":false,"motivo_baja":"Retiro Preventivo por Vencimiento Próximo (< 30 días)"},{"id_lote":5,"id_medicamento":5,"medicamento":"Lorazepam 1mg","laboratorio":"Wyeth","requiere_receta":true,"lote_codigo":"LOT-2024-008","ubicacion":"VITRINA","cantidad":15,"fecha_vencimiento":"30-11-2026","fecha_vencimiento_iso":"2026-11-30","dias_restantes":15,"semaforo_fefo":"critico","activo":false,"motivo_baja":"Retiro Preventivo por Vencimiento Próximo (< 30 días)"},{"id_lote":9,"id_medicamento":9,"medicamento":"Metformina 850mg","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-101","ubicacion":"BODEGA","cantidad":150,"fecha_vencimiento":"05-03-2027","fecha_vencimiento_iso":"2027-03-05","dias_restantes":110,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":6,"id_medicamento":6,"medicamento":"Amoxicilina 500mg","laboratorio":"Bagó","requiere_receta":false,"lote_codigo":"LOT-2024-001","ubicacion":"VITRINA","cantidad":60,"fecha_vencimiento":"04-05-2027","fecha_vencimiento_iso":"2027-05-04","dias_restantes":170,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":13,"id_medicamento":1,"medicamento":"Tramadol 50mg","laboratorio":"Grünenthal","requiere_receta":true,"lote_codigo":"LOT-2026-851","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"21-05-2027","fecha_vencimiento_iso":"2027-05-21","dias_restantes":187,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":10,"id_medicamento":10,"medicamento":"Atorvastatina 20mg","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-102","ubicacion":"BODEGA","cantidad":120,"fecha_vencimiento":"03-06-2027","fecha_vencimiento_iso":"2027-06-03","dias_restantes":200,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":128,"id_medicamento":69,"medicamento":"Fentermina 37.5mg (Sentis)","laboratorio":"Laboratorio Chile","requiere_receta":true,"lote_codigo":"LOT-2025-V077","ubicacion":"VITRINA","cantidad":20,"fecha_vencimiento":"03-06-2027","fecha_vencimiento_iso":"2027-06-03","dias_restantes":200,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":118,"id_medicamento":64,"medicamento":"Zopiclona 7.5mg (Losopil)","laboratorio":"Saval","requiere_receta":true,"lote_codigo":"LOT-2025-V072","ubicacion":"VITRINA","cantidad":30,"fecha_vencimiento":"13-06-2027","fecha_vencimiento_iso":"2027-06-13","dias_restantes":210,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":130,"id_medicamento":70,"medicamento":"Codeína + Paracetamol 30\/500mg (Codetol)","laboratorio":"Saval","requiere_receta":true,"lote_codigo":"LOT-2025-V078","ubicacion":"VITRINA","cantidad":25,"fecha_vencimiento":"18-06-2027","fecha_vencimiento_iso":"2027-06-18","dias_restantes":215,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":116,"id_medicamento":63,"medicamento":"Zolpidem 10mg (Sucedal)","laboratorio":"Recalcine","requiere_receta":true,"lote_codigo":"LOT-2025-V071","ubicacion":"VITRINA","cantidad":35,"fecha_vencimiento":"23-06-2027","fecha_vencimiento_iso":"2027-06-23","dias_restantes":220,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":126,"id_medicamento":68,"medicamento":"Metilfenidato 10mg (Aradix)","laboratorio":"Laboratorio Chile","requiere_receta":true,"lote_codigo":"LOT-2025-V076","ubicacion":"VITRINA","cantidad":25,"fecha_vencimiento":"03-07-2027","fecha_vencimiento_iso":"2027-07-03","dias_restantes":230,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":64,"id_medicamento":37,"medicamento":"Perenteryl 250mg (Probiótico)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-V045","ubicacion":"VITRINA","cantidad":50,"fecha_vencimiento":"03-07-2027","fecha_vencimiento_iso":"2027-07-03","dias_restantes":230,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":52,"id_medicamento":31,"medicamento":"Bromhexina Jarabe Adulto 8mg\/5ml","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V039","ubicacion":"VITRINA","cantidad":65,"fecha_vencimiento":"13-07-2027","fecha_vencimiento_iso":"2027-07-13","dias_restantes":240,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":120,"id_medicamento":65,"medicamento":"Alprazolam 0.5mg (Tranquinal)","laboratorio":"Bagó","requiere_receta":true,"lote_codigo":"LOT-2025-V073","ubicacion":"VITRINA","cantidad":40,"fecha_vencimiento":"13-07-2027","fecha_vencimiento_iso":"2027-07-13","dias_restantes":240,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":94,"id_medicamento":52,"medicamento":"Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V060","ubicacion":"VITRINA","cantidad":65,"fecha_vencimiento":"13-07-2027","fecha_vencimiento_iso":"2027-07-13","dias_restantes":240,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":50,"id_medicamento":30,"medicamento":"Tapsin Compuesto Día\/Noche","laboratorio":"Maverick","requiere_receta":false,"lote_codigo":"LOT-2025-V038","ubicacion":"VITRINA","cantidad":110,"fecha_vencimiento":"23-07-2027","fecha_vencimiento_iso":"2027-07-23","dias_restantes":250,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":124,"id_medicamento":67,"medicamento":"Clotiazepam 5mg (Rize)","laboratorio":"Recalcine","requiere_receta":true,"lote_codigo":"LOT-2025-V075","ubicacion":"VITRINA","cantidad":35,"fecha_vencimiento":"23-07-2027","fecha_vencimiento_iso":"2027-07-23","dias_restantes":250,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":100,"id_medicamento":55,"medicamento":"Claritromicina 500mg (Preclar)","laboratorio":"Abbott","requiere_receta":false,"lote_codigo":"LOT-2025-V063","ubicacion":"VITRINA","cantidad":50,"fecha_vencimiento":"02-08-2027","fecha_vencimiento_iso":"2027-08-02","dias_restantes":260,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":60,"id_medicamento":35,"medicamento":"Viadil Compuesto Gotas 15ml","laboratorio":"Sidus","requiere_receta":false,"lote_codigo":"LOT-2025-V043","ubicacion":"VITRINA","cantidad":75,"fecha_vencimiento":"02-08-2027","fecha_vencimiento_iso":"2027-08-02","dias_restantes":260,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":122,"id_medicamento":66,"medicamento":"Diazepam 10mg","laboratorio":"Laboratorio Chile","requiere_receta":true,"lote_codigo":"LOT-2025-V074","ubicacion":"VITRINA","cantidad":30,"fecha_vencimiento":"02-08-2027","fecha_vencimiento_iso":"2027-08-02","dias_restantes":260,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":26,"id_medicamento":18,"medicamento":"Ketorolaco 10mg Sublingual (Syndol)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V026","ubicacion":"VITRINA","cantidad":55,"fecha_vencimiento":"02-08-2027","fecha_vencimiento_iso":"2027-08-02","dias_restantes":260,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":140,"id_medicamento":75,"medicamento":"Lágrimas Artificiales Hialuronato 0.2% (10ml)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V083","ubicacion":"VITRINA","cantidad":60,"fecha_vencimiento":"12-08-2027","fecha_vencimiento_iso":"2027-08-12","dias_restantes":270,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":36,"id_medicamento":23,"medicamento":"Budesonida Inhalador 200mcg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V031","ubicacion":"VITRINA","cantidad":50,"fecha_vencimiento":"12-08-2027","fecha_vencimiento_iso":"2027-08-12","dias_restantes":270,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":90,"id_medicamento":50,"medicamento":"Sitagliptina 100mg (Januvia)","laboratorio":"MSD","requiere_receta":false,"lote_codigo":"LOT-2025-V058","ubicacion":"VITRINA","cantidad":30,"fecha_vencimiento":"12-08-2027","fecha_vencimiento_iso":"2027-08-12","dias_restantes":270,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":7,"id_medicamento":7,"medicamento":"Losartán 50mg","laboratorio":"Gador","requiere_receta":false,"lote_codigo":"LOT-2024-011","ubicacion":"VITRINA","cantidad":95,"fecha_vencimiento":"22-08-2027","fecha_vencimiento_iso":"2027-08-22","dias_restantes":280,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":98,"id_medicamento":54,"medicamento":"Cefadroxilo 500mg","laboratorio":"Andrómaco","requiere_receta":false,"lote_codigo":"LOT-2025-V062","ubicacion":"VITRINA","cantidad":55,"fecha_vencimiento":"22-08-2027","fecha_vencimiento_iso":"2027-08-22","dias_restantes":280,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":114,"id_medicamento":62,"medicamento":"Pregabalina 75mg (Pregobin)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V070","ubicacion":"VITRINA","cantidad":55,"fecha_vencimiento":"22-08-2027","fecha_vencimiento_iso":"2027-08-22","dias_restantes":280,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":46,"id_medicamento":28,"medicamento":"Montelukast 10mg (Aireal)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V036","ubicacion":"VITRINA","cantidad":45,"fecha_vencimiento":"22-08-2027","fecha_vencimiento_iso":"2027-08-22","dias_restantes":280,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":20,"id_medicamento":15,"medicamento":"Naproxeno Sódico 550mg (Eurogesic)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V023","ubicacion":"VITRINA","cantidad":85,"fecha_vencimiento":"01-09-2027","fecha_vencimiento_iso":"2027-09-01","dias_restantes":290,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":58,"id_medicamento":34,"medicamento":"Domperidona 10mg (Idon)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V042","ubicacion":"VITRINA","cantidad":60,"fecha_vencimiento":"01-09-2027","fecha_vencimiento_iso":"2027-09-01","dias_restantes":290,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":82,"id_medicamento":46,"medicamento":"Rosuvastatina 20mg (Crestor)","laboratorio":"AstraZeneca","requiere_receta":false,"lote_codigo":"LOT-2025-V054","ubicacion":"VITRINA","cantidad":55,"fecha_vencimiento":"06-09-2027","fecha_vencimiento_iso":"2027-09-06","dias_restantes":295,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":34,"id_medicamento":22,"medicamento":"Salbutamol Inhalador 100mcg (Aerolin)","laboratorio":"GSK","requiere_receta":false,"lote_codigo":"LOT-2025-V030","ubicacion":"VITRINA","cantidad":80,"fecha_vencimiento":"11-09-2027","fecha_vencimiento_iso":"2027-09-11","dias_restantes":300,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":112,"id_medicamento":61,"medicamento":"Quetiapina 25mg (Quetidin)","laboratorio":"Recalcine","requiere_receta":false,"lote_codigo":"LOT-2025-V069","ubicacion":"VITRINA","cantidad":50,"fecha_vencimiento":"11-09-2027","fecha_vencimiento_iso":"2027-09-11","dias_restantes":300,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":96,"id_medicamento":53,"medicamento":"Ciprofloxacino 500mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V061","ubicacion":"VITRINA","cantidad":70,"fecha_vencimiento":"11-09-2027","fecha_vencimiento_iso":"2027-09-11","dias_restantes":300,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":104,"id_medicamento":57,"medicamento":"Aciclovir 400mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V065","ubicacion":"VITRINA","cantidad":45,"fecha_vencimiento":"21-09-2027","fecha_vencimiento_iso":"2027-09-21","dias_restantes":310,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":54,"id_medicamento":32,"medicamento":"Esomeprazol 40mg (Esoprazol)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V040","ubicacion":"VITRINA","cantidad":70,"fecha_vencimiento":"21-09-2027","fecha_vencimiento_iso":"2027-09-21","dias_restantes":310,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":30,"id_medicamento":20,"medicamento":"Celecoxib 200mg (Celebra)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-V028","ubicacion":"VITRINA","cantidad":45,"fecha_vencimiento":"21-09-2027","fecha_vencimiento_iso":"2027-09-21","dias_restantes":310,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":76,"id_medicamento":43,"medicamento":"Carvedilol 25mg (Dualten)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V051","ubicacion":"VITRINA","cantidad":65,"fecha_vencimiento":"21-09-2027","fecha_vencimiento_iso":"2027-09-21","dias_restantes":310,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":66,"id_medicamento":38,"medicamento":"Trimebutino Maleato 200mg (Debridat)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-V046","ubicacion":"VITRINA","cantidad":55,"fecha_vencimiento":"26-09-2027","fecha_vencimiento_iso":"2027-09-26","dias_restantes":315,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":92,"id_medicamento":51,"medicamento":"Levotiroxina Sódica 100mcg (Eutirox)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-V059","ubicacion":"VITRINA","cantidad":95,"fecha_vencimiento":"01-10-2027","fecha_vencimiento_iso":"2027-10-01","dias_restantes":320,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":108,"id_medicamento":59,"medicamento":"Escitalopram 10mg (Celtium)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V067","ubicacion":"VITRINA","cantidad":65,"fecha_vencimiento":"01-10-2027","fecha_vencimiento_iso":"2027-10-01","dias_restantes":320,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":129,"id_medicamento":69,"medicamento":"Fentermina 37.5mg (Sentis)","laboratorio":"Laboratorio Chile","requiere_receta":true,"lote_codigo":"LOT-2025-B077","ubicacion":"BODEGA","cantidad":45,"fecha_vencimiento":"01-10-2027","fecha_vencimiento_iso":"2027-10-01","dias_restantes":320,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":18,"id_medicamento":14,"medicamento":"Ketoprofeno 100mg (Profenid)","laboratorio":"Sanofi","requiere_receta":false,"lote_codigo":"LOT-2025-V022","ubicacion":"VITRINA","cantidad":60,"fecha_vencimiento":"01-10-2027","fecha_vencimiento_iso":"2027-10-01","dias_restantes":320,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":44,"id_medicamento":27,"medicamento":"Levocetirizina 5mg (Degraler)","laboratorio":"Bagó","requiere_receta":false,"lote_codigo":"LOT-2025-V035","ubicacion":"VITRINA","cantidad":60,"fecha_vencimiento":"11-10-2027","fecha_vencimiento_iso":"2027-10-11","dias_restantes":330,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":119,"id_medicamento":64,"medicamento":"Zopiclona 7.5mg (Losopil)","laboratorio":"Saval","requiere_receta":true,"lote_codigo":"LOT-2025-B072","ubicacion":"BODEGA","cantidad":60,"fecha_vencimiento":"11-10-2027","fecha_vencimiento_iso":"2027-10-11","dias_restantes":330,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":84,"id_medicamento":47,"medicamento":"Clopidogrel 75mg","laboratorio":"Sanofi","requiere_receta":false,"lote_codigo":"LOT-2025-V055","ubicacion":"VITRINA","cantidad":50,"fecha_vencimiento":"11-10-2027","fecha_vencimiento_iso":"2027-10-11","dias_restantes":330,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":134,"id_medicamento":72,"medicamento":"Tamsulosina 0.4mg (Secotex)","laboratorio":"Boehringer Ingelheim","requiere_receta":false,"lote_codigo":"LOT-2025-V080","ubicacion":"VITRINA","cantidad":55,"fecha_vencimiento":"11-10-2027","fecha_vencimiento_iso":"2027-10-11","dias_restantes":330,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":11,"id_medicamento":11,"medicamento":"Azitromicina 500mg","laboratorio":"Andrómaco","requiere_receta":false,"lote_codigo":"LOT-2025-103","ubicacion":"BODEGA","cantidad":80,"fecha_vencimiento":"11-10-2027","fecha_vencimiento_iso":"2027-10-11","dias_restantes":330,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":131,"id_medicamento":70,"medicamento":"Codeína + Paracetamol 30\/500mg (Codetol)","laboratorio":"Saval","requiere_receta":true,"lote_codigo":"LOT-2025-B078","ubicacion":"BODEGA","cantidad":50,"fecha_vencimiento":"16-10-2027","fecha_vencimiento_iso":"2027-10-16","dias_restantes":335,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":70,"id_medicamento":40,"medicamento":"Valsartán 160mg (Tareg)","laboratorio":"Novartis","requiere_receta":false,"lote_codigo":"LOT-2025-V048","ubicacion":"VITRINA","cantidad":60,"fecha_vencimiento":"21-10-2027","fecha_vencimiento_iso":"2027-10-21","dias_restantes":340,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":106,"id_medicamento":58,"medicamento":"Sertralina 50mg (Altruline)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-V066","ubicacion":"VITRINA","cantidad":70,"fecha_vencimiento":"21-10-2027","fecha_vencimiento_iso":"2027-10-21","dias_restantes":340,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":117,"id_medicamento":63,"medicamento":"Zolpidem 10mg (Sucedal)","laboratorio":"Recalcine","requiere_receta":true,"lote_codigo":"LOT-2025-B071","ubicacion":"BODEGA","cantidad":70,"fecha_vencimiento":"21-10-2027","fecha_vencimiento_iso":"2027-10-21","dias_restantes":340,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":32,"id_medicamento":21,"medicamento":"Ácido Mefenámico 500mg (Tanston)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-V029","ubicacion":"VITRINA","cantidad":65,"fecha_vencimiento":"21-10-2027","fecha_vencimiento_iso":"2027-10-21","dias_restantes":340,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":65,"id_medicamento":37,"medicamento":"Perenteryl 250mg (Probiótico)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-B045","ubicacion":"BODEGA","cantidad":95,"fecha_vencimiento":"31-10-2027","fecha_vencimiento_iso":"2027-10-31","dias_restantes":350,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":102,"id_medicamento":56,"medicamento":"Fluconazol 150mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V064","ubicacion":"VITRINA","cantidad":75,"fecha_vencimiento":"31-10-2027","fecha_vencimiento_iso":"2027-10-31","dias_restantes":350,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":136,"id_medicamento":73,"medicamento":"Betametasona Crema Dérmica 0.05% (30g)","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V081","ubicacion":"VITRINA","cantidad":70,"fecha_vencimiento":"31-10-2027","fecha_vencimiento_iso":"2027-10-31","dias_restantes":350,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":86,"id_medicamento":48,"medicamento":"Metformina 1000mg XR (Glafornil XR)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-V056","ubicacion":"VITRINA","cantidad":75,"fecha_vencimiento":"31-10-2027","fecha_vencimiento_iso":"2027-10-31","dias_restantes":350,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":127,"id_medicamento":68,"medicamento":"Metilfenidato 10mg (Aradix)","laboratorio":"Laboratorio Chile","requiere_receta":true,"lote_codigo":"LOT-2025-B076","ubicacion":"BODEGA","cantidad":50,"fecha_vencimiento":"31-10-2027","fecha_vencimiento_iso":"2027-10-31","dias_restantes":350,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":22,"id_medicamento":16,"medicamento":"Diclofenaco Sódico 50mg (Lertus)","laboratorio":"Recalcine","requiere_receta":false,"lote_codigo":"LOT-2025-V024","ubicacion":"VITRINA","cantidad":70,"fecha_vencimiento":"31-10-2027","fecha_vencimiento_iso":"2027-10-31","dias_restantes":350,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":95,"id_medicamento":52,"medicamento":"Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B060","ubicacion":"BODEGA","cantidad":130,"fecha_vencimiento":"10-11-2027","fecha_vencimiento_iso":"2027-11-10","dias_restantes":360,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":40,"id_medicamento":25,"medicamento":"Desloratadina 5mg (Neolar)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V033","ubicacion":"VITRINA","cantidad":75,"fecha_vencimiento":"10-11-2027","fecha_vencimiento_iso":"2027-11-10","dias_restantes":360,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":72,"id_medicamento":41,"medicamento":"Amlodipino 10mg","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-V049","ubicacion":"VITRINA","cantidad":90,"fecha_vencimiento":"10-11-2027","fecha_vencimiento_iso":"2027-11-10","dias_restantes":360,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":121,"id_medicamento":65,"medicamento":"Alprazolam 0.5mg (Tranquinal)","laboratorio":"Bagó","requiere_receta":true,"lote_codigo":"LOT-2025-B073","ubicacion":"BODEGA","cantidad":80,"fecha_vencimiento":"10-11-2027","fecha_vencimiento_iso":"2027-11-10","dias_restantes":360,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":132,"id_medicamento":71,"medicamento":"Drospirenona + Etinilestradiol (Vexa CD)","laboratorio":"Abbott","requiere_receta":false,"lote_codigo":"LOT-2025-V079","ubicacion":"VITRINA","cantidad":80,"fecha_vencimiento":"10-11-2027","fecha_vencimiento_iso":"2027-11-10","dias_restantes":360,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":53,"id_medicamento":31,"medicamento":"Bromhexina Jarabe Adulto 8mg\/5ml","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B039","ubicacion":"BODEGA","cantidad":120,"fecha_vencimiento":"10-11-2027","fecha_vencimiento_iso":"2027-11-10","dias_restantes":360,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":88,"id_medicamento":49,"medicamento":"Glibenclamida 5mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V057","ubicacion":"VITRINA","cantidad":80,"fecha_vencimiento":"20-11-2027","fecha_vencimiento_iso":"2027-11-20","dias_restantes":370,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":125,"id_medicamento":67,"medicamento":"Clotiazepam 5mg (Rize)","laboratorio":"Recalcine","requiere_receta":true,"lote_codigo":"LOT-2025-B075","ubicacion":"BODEGA","cantidad":70,"fecha_vencimiento":"20-11-2027","fecha_vencimiento_iso":"2027-11-20","dias_restantes":370,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":51,"id_medicamento":30,"medicamento":"Tapsin Compuesto Día\/Noche","laboratorio":"Maverick","requiere_receta":false,"lote_codigo":"LOT-2025-B038","ubicacion":"BODEGA","cantidad":220,"fecha_vencimiento":"20-11-2027","fecha_vencimiento_iso":"2027-11-20","dias_restantes":370,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":56,"id_medicamento":33,"medicamento":"Famotidina 40mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V041","ubicacion":"VITRINA","cantidad":85,"fecha_vencimiento":"20-11-2027","fecha_vencimiento_iso":"2027-11-20","dias_restantes":370,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":27,"id_medicamento":18,"medicamento":"Ketorolaco 10mg Sublingual (Syndol)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B026","ubicacion":"BODEGA","cantidad":90,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":138,"id_medicamento":74,"medicamento":"Clotrimazol Crema Tópica 1% (Canesten)","laboratorio":"Bayer","requiere_receta":false,"lote_codigo":"LOT-2025-V082","ubicacion":"VITRINA","cantidad":85,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":101,"id_medicamento":55,"medicamento":"Claritromicina 500mg (Preclar)","laboratorio":"Abbott","requiere_receta":false,"lote_codigo":"LOT-2025-B063","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":123,"id_medicamento":66,"medicamento":"Diazepam 10mg","laboratorio":"Laboratorio Chile","requiere_receta":true,"lote_codigo":"LOT-2025-B074","ubicacion":"BODEGA","cantidad":60,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":14,"id_medicamento":12,"medicamento":"Paracetamol 1g (Kitadol Forte)","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V020","ubicacion":"VITRINA","cantidad":120,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":61,"id_medicamento":35,"medicamento":"Viadil Compuesto Gotas 15ml","laboratorio":"Sidus","requiere_receta":false,"lote_codigo":"LOT-2025-B043","ubicacion":"BODEGA","cantidad":130,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":68,"id_medicamento":39,"medicamento":"Enalapril Maleato 20mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V047","ubicacion":"VITRINA","cantidad":115,"fecha_vencimiento":"30-11-2027","fecha_vencimiento_iso":"2027-11-30","dias_restantes":380,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":110,"id_medicamento":60,"medicamento":"Fluoxetina 20mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V068","ubicacion":"VITRINA","cantidad":85,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":28,"id_medicamento":19,"medicamento":"Metamizol Sódico 300mg (Dipirona)","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V027","ubicacion":"VITRINA","cantidad":130,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":37,"id_medicamento":23,"medicamento":"Budesonida Inhalador 200mcg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B031","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":141,"id_medicamento":75,"medicamento":"Lágrimas Artificiales Hialuronato 0.2% (10ml)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B083","ubicacion":"BODEGA","cantidad":120,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":78,"id_medicamento":44,"medicamento":"Furosemida 40mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V052","ubicacion":"VITRINA","cantidad":85,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":91,"id_medicamento":50,"medicamento":"Sitagliptina 100mg (Januvia)","laboratorio":"MSD","requiere_receta":false,"lote_codigo":"LOT-2025-B058","ubicacion":"BODEGA","cantidad":60,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":42,"id_medicamento":26,"medicamento":"Cetirizina 10mg (Rigotax)","laboratorio":"Recalcine","requiere_receta":false,"lote_codigo":"LOT-2025-V034","ubicacion":"VITRINA","cantidad":90,"fecha_vencimiento":"10-12-2027","fecha_vencimiento_iso":"2027-12-10","dias_restantes":390,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":62,"id_medicamento":36,"medicamento":"Loperamida 2mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V044","ubicacion":"VITRINA","cantidad":100,"fecha_vencimiento":"20-12-2027","fecha_vencimiento_iso":"2027-12-20","dias_restantes":400,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":115,"id_medicamento":62,"medicamento":"Pregabalina 75mg (Pregobin)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B070","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"20-12-2027","fecha_vencimiento_iso":"2027-12-20","dias_restantes":400,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":47,"id_medicamento":28,"medicamento":"Montelukast 10mg (Aireal)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B036","ubicacion":"BODEGA","cantidad":90,"fecha_vencimiento":"20-12-2027","fecha_vencimiento_iso":"2027-12-20","dias_restantes":400,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":80,"id_medicamento":45,"medicamento":"Hidroclorotiazida 50mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V053","ubicacion":"VITRINA","cantidad":95,"fecha_vencimiento":"20-12-2027","fecha_vencimiento_iso":"2027-12-20","dias_restantes":400,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":144,"id_medicamento":77,"medicamento":"Complejo Vitamínico B1-B6-B12 (Neurobionta)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-V085","ubicacion":"VITRINA","cantidad":75,"fecha_vencimiento":"20-12-2027","fecha_vencimiento_iso":"2027-12-20","dias_restantes":400,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":99,"id_medicamento":54,"medicamento":"Cefadroxilo 500mg","laboratorio":"Andrómaco","requiere_receta":false,"lote_codigo":"LOT-2025-B062","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"20-12-2027","fecha_vencimiento_iso":"2027-12-20","dias_restantes":400,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":16,"id_medicamento":13,"medicamento":"Ibuprofeno 600mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-V021","ubicacion":"VITRINA","cantidad":95,"fecha_vencimiento":"30-12-2027","fecha_vencimiento_iso":"2027-12-30","dias_restantes":410,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":12,"id_medicamento":4,"medicamento":"Paracetamol 500mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-204","ubicacion":"BODEGA","cantidad":500,"fecha_vencimiento":"30-12-2027","fecha_vencimiento_iso":"2027-12-30","dias_restantes":410,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":21,"id_medicamento":15,"medicamento":"Naproxeno Sódico 550mg (Eurogesic)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B023","ubicacion":"BODEGA","cantidad":150,"fecha_vencimiento":"30-12-2027","fecha_vencimiento_iso":"2027-12-30","dias_restantes":410,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":74,"id_medicamento":42,"medicamento":"Atenolol 50mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V050","ubicacion":"VITRINA","cantidad":80,"fecha_vencimiento":"30-12-2027","fecha_vencimiento_iso":"2027-12-30","dias_restantes":410,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":59,"id_medicamento":34,"medicamento":"Domperidona 10mg (Idon)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B042","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"30-12-2027","fecha_vencimiento_iso":"2027-12-30","dias_restantes":410,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":83,"id_medicamento":46,"medicamento":"Rosuvastatina 20mg (Crestor)","laboratorio":"AstraZeneca","requiere_receta":false,"lote_codigo":"LOT-2025-B054","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"04-01-2028","fecha_vencimiento_iso":"2028-01-04","dias_restantes":415,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":142,"id_medicamento":76,"medicamento":"Calcio + Vitamina D3 800 UI (Elcal-D)","laboratorio":"Andrómaco","requiere_receta":false,"lote_codigo":"LOT-2025-V084","ubicacion":"VITRINA","cantidad":65,"fecha_vencimiento":"09-01-2028","fecha_vencimiento_iso":"2028-01-09","dias_restantes":420,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":97,"id_medicamento":53,"medicamento":"Ciprofloxacino 500mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B061","ubicacion":"BODEGA","cantidad":140,"fecha_vencimiento":"09-01-2028","fecha_vencimiento_iso":"2028-01-09","dias_restantes":420,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":38,"id_medicamento":24,"medicamento":"Loratadina 10mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V032","ubicacion":"VITRINA","cantidad":140,"fecha_vencimiento":"09-01-2028","fecha_vencimiento_iso":"2028-01-09","dias_restantes":420,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":113,"id_medicamento":61,"medicamento":"Quetiapina 25mg (Quetidin)","laboratorio":"Recalcine","requiere_receta":false,"lote_codigo":"LOT-2025-B069","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"09-01-2028","fecha_vencimiento_iso":"2028-01-09","dias_restantes":420,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":35,"id_medicamento":22,"medicamento":"Salbutamol Inhalador 100mcg (Aerolin)","laboratorio":"GSK","requiere_receta":false,"lote_codigo":"LOT-2025-B030","ubicacion":"BODEGA","cantidad":160,"fecha_vencimiento":"09-01-2028","fecha_vencimiento_iso":"2028-01-09","dias_restantes":420,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":105,"id_medicamento":57,"medicamento":"Aciclovir 400mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B065","ubicacion":"BODEGA","cantidad":90,"fecha_vencimiento":"19-01-2028","fecha_vencimiento_iso":"2028-01-19","dias_restantes":430,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":77,"id_medicamento":43,"medicamento":"Carvedilol 25mg (Dualten)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B051","ubicacion":"BODEGA","cantidad":130,"fecha_vencimiento":"19-01-2028","fecha_vencimiento_iso":"2028-01-19","dias_restantes":430,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":55,"id_medicamento":32,"medicamento":"Esomeprazol 40mg (Esoprazol)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B040","ubicacion":"BODEGA","cantidad":140,"fecha_vencimiento":"19-01-2028","fecha_vencimiento_iso":"2028-01-19","dias_restantes":430,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":31,"id_medicamento":20,"medicamento":"Celecoxib 200mg (Celebra)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-B028","ubicacion":"BODEGA","cantidad":80,"fecha_vencimiento":"19-01-2028","fecha_vencimiento_iso":"2028-01-19","dias_restantes":430,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":67,"id_medicamento":38,"medicamento":"Trimebutino Maleato 200mg (Debridat)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-B046","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"24-01-2028","fecha_vencimiento_iso":"2028-01-24","dias_restantes":435,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":93,"id_medicamento":51,"medicamento":"Levotiroxina Sódica 100mcg (Eutirox)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-B059","ubicacion":"BODEGA","cantidad":190,"fecha_vencimiento":"29-01-2028","fecha_vencimiento_iso":"2028-01-29","dias_restantes":440,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":109,"id_medicamento":59,"medicamento":"Escitalopram 10mg (Celtium)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B067","ubicacion":"BODEGA","cantidad":130,"fecha_vencimiento":"29-01-2028","fecha_vencimiento_iso":"2028-01-29","dias_restantes":440,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":19,"id_medicamento":14,"medicamento":"Ketoprofeno 100mg (Profenid)","laboratorio":"Sanofi","requiere_receta":false,"lote_codigo":"LOT-2025-B022","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"29-01-2028","fecha_vencimiento_iso":"2028-01-29","dias_restantes":440,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":45,"id_medicamento":27,"medicamento":"Levocetirizina 5mg (Degraler)","laboratorio":"Bagó","requiere_receta":false,"lote_codigo":"LOT-2025-B035","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"08-02-2028","fecha_vencimiento_iso":"2028-02-08","dias_restantes":450,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":135,"id_medicamento":72,"medicamento":"Tamsulosina 0.4mg (Secotex)","laboratorio":"Boehringer Ingelheim","requiere_receta":false,"lote_codigo":"LOT-2025-B080","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"08-02-2028","fecha_vencimiento_iso":"2028-02-08","dias_restantes":450,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":85,"id_medicamento":47,"medicamento":"Clopidogrel 75mg","laboratorio":"Sanofi","requiere_receta":false,"lote_codigo":"LOT-2025-B055","ubicacion":"BODEGA","cantidad":100,"fecha_vencimiento":"08-02-2028","fecha_vencimiento_iso":"2028-02-08","dias_restantes":450,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":24,"id_medicamento":17,"medicamento":"Ácido Acetilsalicílico 100mg (Cardioaspirina)","laboratorio":"Bayer","requiere_receta":false,"lote_codigo":"LOT-2025-V025","ubicacion":"VITRINA","cantidad":110,"fecha_vencimiento":"08-02-2028","fecha_vencimiento_iso":"2028-02-08","dias_restantes":450,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":33,"id_medicamento":21,"medicamento":"Ácido Mefenámico 500mg (Tanston)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-B029","ubicacion":"BODEGA","cantidad":110,"fecha_vencimiento":"18-02-2028","fecha_vencimiento_iso":"2028-02-18","dias_restantes":460,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":71,"id_medicamento":40,"medicamento":"Valsartán 160mg (Tareg)","laboratorio":"Novartis","requiere_receta":false,"lote_codigo":"LOT-2025-B048","ubicacion":"BODEGA","cantidad":120,"fecha_vencimiento":"18-02-2028","fecha_vencimiento_iso":"2028-02-18","dias_restantes":460,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":107,"id_medicamento":58,"medicamento":"Sertralina 50mg (Altruline)","laboratorio":"Pfizer","requiere_receta":false,"lote_codigo":"LOT-2025-B066","ubicacion":"BODEGA","cantidad":140,"fecha_vencimiento":"18-02-2028","fecha_vencimiento_iso":"2028-02-18","dias_restantes":460,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":137,"id_medicamento":73,"medicamento":"Betametasona Crema Dérmica 0.05% (30g)","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B081","ubicacion":"BODEGA","cantidad":140,"fecha_vencimiento":"28-02-2028","fecha_vencimiento_iso":"2028-02-28","dias_restantes":470,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":23,"id_medicamento":16,"medicamento":"Diclofenaco Sódico 50mg (Lertus)","laboratorio":"Recalcine","requiere_receta":false,"lote_codigo":"LOT-2025-B024","ubicacion":"BODEGA","cantidad":120,"fecha_vencimiento":"28-02-2028","fecha_vencimiento_iso":"2028-02-28","dias_restantes":470,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":87,"id_medicamento":48,"medicamento":"Metformina 1000mg XR (Glafornil XR)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-B056","ubicacion":"BODEGA","cantidad":150,"fecha_vencimiento":"28-02-2028","fecha_vencimiento_iso":"2028-02-28","dias_restantes":470,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":103,"id_medicamento":56,"medicamento":"Fluconazol 150mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B064","ubicacion":"BODEGA","cantidad":150,"fecha_vencimiento":"28-02-2028","fecha_vencimiento_iso":"2028-02-28","dias_restantes":470,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":133,"id_medicamento":71,"medicamento":"Drospirenona + Etinilestradiol (Vexa CD)","laboratorio":"Abbott","requiere_receta":false,"lote_codigo":"LOT-2025-B079","ubicacion":"BODEGA","cantidad":160,"fecha_vencimiento":"09-03-2028","fecha_vencimiento_iso":"2028-03-09","dias_restantes":480,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":41,"id_medicamento":25,"medicamento":"Desloratadina 5mg (Neolar)","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B033","ubicacion":"BODEGA","cantidad":140,"fecha_vencimiento":"09-03-2028","fecha_vencimiento_iso":"2028-03-09","dias_restantes":480,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":73,"id_medicamento":41,"medicamento":"Amlodipino 10mg","laboratorio":"Saval","requiere_receta":false,"lote_codigo":"LOT-2025-B049","ubicacion":"BODEGA","cantidad":180,"fecha_vencimiento":"09-03-2028","fecha_vencimiento_iso":"2028-03-09","dias_restantes":480,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":48,"id_medicamento":29,"medicamento":"Clorfenamina Maleato 4mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-V037","ubicacion":"VITRINA","cantidad":150,"fecha_vencimiento":"09-03-2028","fecha_vencimiento_iso":"2028-03-09","dias_restantes":480,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":89,"id_medicamento":49,"medicamento":"Glibenclamida 5mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B057","ubicacion":"BODEGA","cantidad":160,"fecha_vencimiento":"19-03-2028","fecha_vencimiento_iso":"2028-03-19","dias_restantes":490,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":8,"id_medicamento":8,"medicamento":"Ibuprofeno 400mg","laboratorio":"Chile","requiere_receta":false,"lote_codigo":"LOT-2024-007","ubicacion":"VITRINA","cantidad":320,"fecha_vencimiento":"19-03-2028","fecha_vencimiento_iso":"2028-03-19","dias_restantes":490,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":57,"id_medicamento":33,"medicamento":"Famotidina 40mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B041","ubicacion":"BODEGA","cantidad":150,"fecha_vencimiento":"19-03-2028","fecha_vencimiento_iso":"2028-03-19","dias_restantes":490,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":15,"id_medicamento":12,"medicamento":"Paracetamol 1g (Kitadol Forte)","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B020","ubicacion":"BODEGA","cantidad":240,"fecha_vencimiento":"29-03-2028","fecha_vencimiento_iso":"2028-03-29","dias_restantes":500,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":69,"id_medicamento":39,"medicamento":"Enalapril Maleato 20mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B047","ubicacion":"BODEGA","cantidad":230,"fecha_vencimiento":"29-03-2028","fecha_vencimiento_iso":"2028-03-29","dias_restantes":500,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":139,"id_medicamento":74,"medicamento":"Clotrimazol Crema Tópica 1% (Canesten)","laboratorio":"Bayer","requiere_receta":false,"lote_codigo":"LOT-2025-B082","ubicacion":"BODEGA","cantidad":160,"fecha_vencimiento":"29-03-2028","fecha_vencimiento_iso":"2028-03-29","dias_restantes":500,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":111,"id_medicamento":60,"medicamento":"Fluoxetina 20mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B068","ubicacion":"BODEGA","cantidad":170,"fecha_vencimiento":"08-04-2028","fecha_vencimiento_iso":"2028-04-08","dias_restantes":510,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":29,"id_medicamento":19,"medicamento":"Metamizol Sódico 300mg (Dipirona)","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B027","ubicacion":"BODEGA","cantidad":250,"fecha_vencimiento":"08-04-2028","fecha_vencimiento_iso":"2028-04-08","dias_restantes":510,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":43,"id_medicamento":26,"medicamento":"Cetirizina 10mg (Rigotax)","laboratorio":"Recalcine","requiere_receta":false,"lote_codigo":"LOT-2025-B034","ubicacion":"BODEGA","cantidad":160,"fecha_vencimiento":"08-04-2028","fecha_vencimiento_iso":"2028-04-08","dias_restantes":510,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":79,"id_medicamento":44,"medicamento":"Furosemida 40mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B052","ubicacion":"BODEGA","cantidad":170,"fecha_vencimiento":"08-04-2028","fecha_vencimiento_iso":"2028-04-08","dias_restantes":510,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":63,"id_medicamento":36,"medicamento":"Loperamida 2mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B044","ubicacion":"BODEGA","cantidad":190,"fecha_vencimiento":"18-04-2028","fecha_vencimiento_iso":"2028-04-18","dias_restantes":520,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":81,"id_medicamento":45,"medicamento":"Hidroclorotiazida 50mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B053","ubicacion":"BODEGA","cantidad":190,"fecha_vencimiento":"18-04-2028","fecha_vencimiento_iso":"2028-04-18","dias_restantes":520,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":145,"id_medicamento":77,"medicamento":"Complejo Vitamínico B1-B6-B12 (Neurobionta)","laboratorio":"Merck","requiere_receta":false,"lote_codigo":"LOT-2025-B085","ubicacion":"BODEGA","cantidad":140,"fecha_vencimiento":"18-04-2028","fecha_vencimiento_iso":"2028-04-18","dias_restantes":520,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":75,"id_medicamento":42,"medicamento":"Atenolol 50mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B050","ubicacion":"BODEGA","cantidad":160,"fecha_vencimiento":"28-04-2028","fecha_vencimiento_iso":"2028-04-28","dias_restantes":530,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":17,"id_medicamento":13,"medicamento":"Ibuprofeno 600mg","laboratorio":"Laboratorio Chile","requiere_receta":false,"lote_codigo":"LOT-2025-B021","ubicacion":"BODEGA","cantidad":180,"fecha_vencimiento":"28-04-2028","fecha_vencimiento_iso":"2028-04-28","dias_restantes":530,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":39,"id_medicamento":24,"medicamento":"Loratadina 10mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B032","ubicacion":"BODEGA","cantidad":300,"fecha_vencimiento":"08-05-2028","fecha_vencimiento_iso":"2028-05-08","dias_restantes":540,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":143,"id_medicamento":76,"medicamento":"Calcio + Vitamina D3 800 UI (Elcal-D)","laboratorio":"Andrómaco","requiere_receta":false,"lote_codigo":"LOT-2025-B084","ubicacion":"BODEGA","cantidad":130,"fecha_vencimiento":"08-05-2028","fecha_vencimiento_iso":"2028-05-08","dias_restantes":540,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":25,"id_medicamento":17,"medicamento":"Ácido Acetilsalicílico 100mg (Cardioaspirina)","laboratorio":"Bayer","requiere_receta":false,"lote_codigo":"LOT-2025-B025","ubicacion":"BODEGA","cantidad":200,"fecha_vencimiento":"07-06-2028","fecha_vencimiento_iso":"2028-06-07","dias_restantes":570,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null},{"id_lote":49,"id_medicamento":29,"medicamento":"Clorfenamina Maleato 4mg","laboratorio":"Mintlab","requiere_receta":false,"lote_codigo":"LOT-2025-B037","ubicacion":"BODEGA","cantidad":300,"fecha_vencimiento":"07-07-2028","fecha_vencimiento_iso":"2028-07-07","dias_restantes":600,"semaforo_fefo":"optimo","activo":true,"motivo_baja":null}],"convenios":[{"id_convenio":1,"nombre_convenio":"Sin convenio","porcentaje_descuento":0,"aplica_todo_catalogo":true,"fecha_inicio":null,"fecha_fin":null,"fecha_inicio_iso":"","fecha_fin_iso":"","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[],"medicamentos_nombres":[]},{"id_convenio":2,"nombre_convenio":"Fonasa A","porcentaje_descuento":58,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-12-2026","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2026-12-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[2,4,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,31,32,33,34,36,38,39,40,41,42,43,44,45,46,47,48,49,51,52,53,54,55,56,57,58,59,60,61,62,66,71,72,73,74,76],"medicamentos_nombres":["Omeprazol 20mg","Paracetamol 500mg","Amoxicilina 500mg","Losartán 50mg","Ibuprofeno 400mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Paracetamol 1g (Kitadol Forte)","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Metamizol Sódico 300mg (Dipirona)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Loratadina 10mg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Montelukast 10mg (Aireal)","Clorfenamina Maleato 4mg","Bromhexina Jarabe Adulto 8mg\/5ml","Esomeprazol 40mg (Esoprazol)","Famotidina 40mg","Domperidona 10mg (Idon)","Loperamida 2mg","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Diazepam 10mg","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Clotrimazol Crema Tópica 1% (Canesten)","Calcio + Vitamina D3 800 UI (Elcal-D)"]},{"id_convenio":3,"nombre_convenio":"Fonasa B","porcentaje_descuento":80,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[2,4,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,31,32,33,34,36,38,39,40,41,42,43,44,45,46,47,48,49,51,52,53,54,55,56,57,58,59,60,61,62,66,71,72,73,74,76],"medicamentos_nombres":["Omeprazol 20mg","Paracetamol 500mg","Amoxicilina 500mg","Losartán 50mg","Ibuprofeno 400mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Paracetamol 1g (Kitadol Forte)","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Metamizol Sódico 300mg (Dipirona)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Loratadina 10mg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Montelukast 10mg (Aireal)","Clorfenamina Maleato 4mg","Bromhexina Jarabe Adulto 8mg\/5ml","Esomeprazol 40mg (Esoprazol)","Famotidina 40mg","Domperidona 10mg (Idon)","Loperamida 2mg","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Diazepam 10mg","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Clotrimazol Crema Tópica 1% (Canesten)","Calcio + Vitamina D3 800 UI (Elcal-D)"]},{"id_convenio":4,"nombre_convenio":"Fonasa C","porcentaje_descuento":60,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[2,4,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,31,32,33,34,36,38,39,40,41,42,43,44,45,46,47,48,49,51,52,53,54,55,56,57,58,59,60,61,62,66,71,72,73,74,76],"medicamentos_nombres":["Omeprazol 20mg","Paracetamol 500mg","Amoxicilina 500mg","Losartán 50mg","Ibuprofeno 400mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Paracetamol 1g (Kitadol Forte)","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Metamizol Sódico 300mg (Dipirona)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Loratadina 10mg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Montelukast 10mg (Aireal)","Clorfenamina Maleato 4mg","Bromhexina Jarabe Adulto 8mg\/5ml","Esomeprazol 40mg (Esoprazol)","Famotidina 40mg","Domperidona 10mg (Idon)","Loperamida 2mg","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Diazepam 10mg","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Clotrimazol Crema Tópica 1% (Canesten)","Calcio + Vitamina D3 800 UI (Elcal-D)"]},{"id_convenio":5,"nombre_convenio":"Fonasa D","porcentaje_descuento":40,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[2,4,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,22,23,24,25,26,28,29,31,32,33,34,36,38,39,40,41,42,43,44,45,46,47,48,49,51,52,53,54,55,56,57,58,59,60,61,62,66,71,72,73,74,76],"medicamentos_nombres":["Omeprazol 20mg","Paracetamol 500mg","Amoxicilina 500mg","Losartán 50mg","Ibuprofeno 400mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Paracetamol 1g (Kitadol Forte)","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Metamizol Sódico 300mg (Dipirona)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Loratadina 10mg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Montelukast 10mg (Aireal)","Clorfenamina Maleato 4mg","Bromhexina Jarabe Adulto 8mg\/5ml","Esomeprazol 40mg (Esoprazol)","Famotidina 40mg","Domperidona 10mg (Idon)","Loperamida 2mg","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Diazepam 10mg","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Clotrimazol Crema Tópica 1% (Canesten)","Calcio + Vitamina D3 800 UI (Elcal-D)"]},{"id_convenio":6,"nombre_convenio":"GES \/ AUGE","porcentaje_descuento":80,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[2,7,9,10,17,20,22,23,28,39,40,41,42,43,44,45,46,47,48,49,51,58,59,60,61,72],"medicamentos_nombres":["Omeprazol 20mg","Losartán 50mg","Metformina 850mg","Atorvastatina 20mg","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Celecoxib 200mg (Celebra)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Montelukast 10mg (Aireal)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Levotiroxina Sódica 100mcg (Eutirox)","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Tamsulosina 0.4mg (Secotex)"]},{"id_convenio":7,"nombre_convenio":"Isapre Cruz Blanca","porcentaje_descuento":30,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[1,2,3,5,6,7,9,10,11,13,14,15,16,17,18,20,21,22,23,25,26,27,28,32,34,35,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,75,76,77],"medicamentos_nombres":["Tramadol 50mg","Omeprazol 20mg","Clonazepam 2mg","Lorazepam 1mg","Amoxicilina 500mg","Losartán 50mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Ketorolaco 10mg Sublingual (Syndol)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Levocetirizina 5mg (Degraler)","Montelukast 10mg (Aireal)","Esomeprazol 40mg (Esoprazol)","Domperidona 10mg (Idon)","Viadil Compuesto Gotas 15ml","Perenteryl 250mg (Probiótico)","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Sitagliptina 100mg (Januvia)","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Zolpidem 10mg (Sucedal)","Zopiclona 7.5mg (Losopil)","Alprazolam 0.5mg (Tranquinal)","Diazepam 10mg","Clotiazepam 5mg (Rize)","Metilfenidato 10mg (Aradix)","Fentermina 37.5mg (Sentis)","Codeína + Paracetamol 30\/500mg (Codetol)","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Lágrimas Artificiales Hialuronato 0.2% (10ml)","Calcio + Vitamina D3 800 UI (Elcal-D)","Complejo Vitamínico B1-B6-B12 (Neurobionta)"]},{"id_convenio":8,"nombre_convenio":"Isapre Banmédica","porcentaje_descuento":25,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[1,2,3,5,6,7,9,10,11,13,14,15,16,17,18,20,21,22,23,25,26,27,28,32,34,35,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,75,76,77],"medicamentos_nombres":["Tramadol 50mg","Omeprazol 20mg","Clonazepam 2mg","Lorazepam 1mg","Amoxicilina 500mg","Losartán 50mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Ketorolaco 10mg Sublingual (Syndol)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Levocetirizina 5mg (Degraler)","Montelukast 10mg (Aireal)","Esomeprazol 40mg (Esoprazol)","Domperidona 10mg (Idon)","Viadil Compuesto Gotas 15ml","Perenteryl 250mg (Probiótico)","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Sitagliptina 100mg (Januvia)","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Zolpidem 10mg (Sucedal)","Zopiclona 7.5mg (Losopil)","Alprazolam 0.5mg (Tranquinal)","Diazepam 10mg","Clotiazepam 5mg (Rize)","Metilfenidato 10mg (Aradix)","Fentermina 37.5mg (Sentis)","Codeína + Paracetamol 30\/500mg (Codetol)","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Lágrimas Artificiales Hialuronato 0.2% (10ml)","Calcio + Vitamina D3 800 UI (Elcal-D)","Complejo Vitamínico B1-B6-B12 (Neurobionta)"]},{"id_convenio":9,"nombre_convenio":"Isapre Colmena","porcentaje_descuento":20,"aplica_todo_catalogo":false,"fecha_inicio":"01-01-2026","fecha_fin":"01-07-2027","fecha_inicio_iso":"2026-01-01","fecha_fin_iso":"2027-07-01","activo":true,"estado_vigencia":"VIGENTE","medicamentos_ids":[1,2,3,5,6,7,9,10,11,13,14,15,16,17,18,20,21,22,23,25,26,27,28,32,34,35,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,75,76,77],"medicamentos_nombres":["Tramadol 50mg","Omeprazol 20mg","Clonazepam 2mg","Lorazepam 1mg","Amoxicilina 500mg","Losartán 50mg","Metformina 850mg","Atorvastatina 20mg","Azitromicina 500mg","Ibuprofeno 600mg","Ketoprofeno 100mg (Profenid)","Naproxeno Sódico 550mg (Eurogesic)","Diclofenaco Sódico 50mg (Lertus)","Ácido Acetilsalicílico 100mg (Cardioaspirina)","Ketorolaco 10mg Sublingual (Syndol)","Celecoxib 200mg (Celebra)","Ácido Mefenámico 500mg (Tanston)","Salbutamol Inhalador 100mcg (Aerolin)","Budesonida Inhalador 200mcg","Desloratadina 5mg (Neolar)","Cetirizina 10mg (Rigotax)","Levocetirizina 5mg (Degraler)","Montelukast 10mg (Aireal)","Esomeprazol 40mg (Esoprazol)","Domperidona 10mg (Idon)","Viadil Compuesto Gotas 15ml","Perenteryl 250mg (Probiótico)","Trimebutino Maleato 200mg (Debridat)","Enalapril Maleato 20mg","Valsartán 160mg (Tareg)","Amlodipino 10mg","Atenolol 50mg","Carvedilol 25mg (Dualten)","Furosemida 40mg","Hidroclorotiazida 50mg","Rosuvastatina 20mg (Crestor)","Clopidogrel 75mg","Metformina 1000mg XR (Glafornil XR)","Glibenclamida 5mg","Sitagliptina 100mg (Januvia)","Levotiroxina Sódica 100mcg (Eutirox)","Amoxicilina + Ác. Clavulánico 875\/125mg (Clavinex)","Ciprofloxacino 500mg","Cefadroxilo 500mg","Claritromicina 500mg (Preclar)","Fluconazol 150mg","Aciclovir 400mg","Sertralina 50mg (Altruline)","Escitalopram 10mg (Celtium)","Fluoxetina 20mg","Quetiapina 25mg (Quetidin)","Pregabalina 75mg (Pregobin)","Zolpidem 10mg (Sucedal)","Zopiclona 7.5mg (Losopil)","Alprazolam 0.5mg (Tranquinal)","Diazepam 10mg","Clotiazepam 5mg (Rize)","Metilfenidato 10mg (Aradix)","Fentermina 37.5mg (Sentis)","Codeína + Paracetamol 30\/500mg (Codetol)","Drospirenona + Etinilestradiol (Vexa CD)","Tamsulosina 0.4mg (Secotex)","Betametasona Crema Dérmica 0.05% (30g)","Lágrimas Artificiales Hialuronato 0.2% (10ml)","Calcio + Vitamina D3 800 UI (Elcal-D)","Complejo Vitamínico B1-B6-B12 (Neurobionta)"]}],"ispLogs":[{"id_registro":3,"medicamento":"Tramadol 50mg","rut_paciente":"19.876.543-4","nombre_paciente":"Paciente Registrado","rut_medico":"07.654.321-K","nombre_medico":"Médico Prescriptor ISP","nro_folio_receta":"REC-2026-8843","cantidad_prescrita":1,"estado":"PENDIENTE","qf_nombre":"Pendiente de firma","fecha":"En espera"},{"id_registro":2,"medicamento":"Lorazepam 1mg","rut_paciente":"16.234.890-1","nombre_paciente":"Paciente Registrado","rut_medico":"08.111.222-3","nombre_medico":"Médico Prescriptor ISP","nro_folio_receta":"REC-2026-8842","cantidad_prescrita":1,"estado":"RECHAZADO","qf_nombre":"Dr. Carlos Vega","fecha":"15-11-2026 15:52"},{"id_registro":1,"medicamento":"Clonazepam 2mg","rut_paciente":"18.455.120-K","nombre_paciente":"Paciente Registrado","rut_medico":"9.876.543-2","nombre_medico":"Médico Prescriptor ISP","nro_folio_receta":"REC-2026-8841","cantidad_prescrita":1,"estado":"AUTORIZADO","qf_nombre":"Dr. Carlos Vega","fecha":"15-11-2026 15:33"}],"users":[{"id_usuario":1,"rut":"12.345.678-5","nombre_completo":"Ana Torres","email":"ana.torres@farmanet.cl","id_rol":1,"role":"vendedor","role_label":"Vendedor","activo":true,"tiene_pin":false},{"id_usuario":2,"rut":"11.222.333-4","nombre_completo":"Dr. Carlos Vega","email":"carlos.vega@farmanet.cl","id_rol":2,"role":"quimico_farmaceutico","role_label":"Q. Farmacéutico","activo":true,"tiene_pin":true},{"id_usuario":3,"rut":"15.432.876-5","nombre_completo":"Luis Pinto","email":"luis.pinto@farmanet.cl","id_rol":3,"role":"bodeguero","role_label":"Bodeguero","activo":true,"tiene_pin":false},{"id_usuario":4,"rut":"10.111.222-3","nombre_completo":"María Salinas","email":"maria.salinas@farmanet.cl","id_rol":4,"role":"administrador","role_label":"Administrador","activo":true,"tiene_pin":false},{"id_usuario":5,"rut":"15.111.223-4","nombre_completo":"Rocio Cifuentes","email":"rocio@gmail.com","id_rol":3,"role":"bodeguero","role_label":"Bodeguero","activo":false,"tiene_pin":false}],"sales":[{"id_venta":4,"fecha_hora":"15-11-2026 15:33","vendedor":"Ana Torres","convenio":"Sin convenio","subtotal":14990,"descuento_total":0,"total":14990,"items_resumen":"Clonazepam 2mg x1"},{"id_venta":3,"fecha_hora":"05-11-2026 19:04","vendedor":"Ana Torres","convenio":"GES \/ AUGE","subtotal":513000,"descuento_total":100000,"total":413000,"items_resumen":"Omeprazol 20mg x98, Losartán 50mg x76, Amoxicilina 500mg x64"},{"id_venta":2,"fecha_hora":"05-11-2026 18:04","vendedor":"Ana Torres","convenio":"Isapre Cruz Blanca","subtotal":251000,"descuento_total":64000,"total":187000,"items_resumen":"Ibuprofeno 400mg x118"},{"id_venta":1,"fecha_hora":"05-11-2026 17:04","vendedor":"Ana Torres","convenio":"Fonasa B","subtotal":420000,"descuento_total":186000,"total":234000,"items_resumen":"Paracetamol 500mg x145"}],"auditLogs":[{"_id":"23639a9d3638fd2fd51bfe14","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T19:04:36-03:00","usuario_qf":{"id_usuario":2,"rut":"11.222.333-4","nombre":"Dr. Carlos Vega"},"datos_dispensacion":{"rol":"quimico_farmaceutico","usuario":"Dr. Carlos Vega"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"cc5490b948319b42f85c5d87bdfecda75b91a2a049ff833e14629c821c4e1ca4"},{"_id":"952965685513be892563e196","evento":"CIERRE_SESION","marca_tiempo":"2026-11-15T19:04:31-03:00","usuario_qf":{"id_usuario":3,"rut":"15.432.876-5","nombre":"Luis Pinto"},"datos_dispensacion":{"rol":"bodeguero"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"be6807fc4fcbe8d6956ba659476cbe4b4f631728c08911fc2e94fdee4f111599"},{"_id":"278edb8982e9a136672bab25","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T19:04:19-03:00","usuario_qf":{"id_usuario":3,"rut":"15.432.876-5","nombre":"Luis Pinto"},"datos_dispensacion":{"rol":"bodeguero","usuario":"Luis Pinto"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"d0415157f4b46aafd782727053a64e1a13762b9ba0ee6c03f112c281db7d0b48"},{"_id":"268e27fe6f1029453383ab68","evento":"CIERRE_SESION","marca_tiempo":"2026-11-15T19:04:14-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"rol":"administrador"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"b41832fd9b334a5aa768195f0bb5e398ace7f5705708d80a1f046a75d4d59ab4"},{"_id":"643a7d7b99a580437ff30e53","evento":"BAJA_SANITARIA_POR_CADUCIDAD","marca_tiempo":"2026-11-15T18:40:13-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"id_lote":5,"lote_codigo":"LOT-2024-008","medicamento":"Lorazepam 1mg","ubicacion_origen":"VITRINA","motivo_baja":"Retiro Preventivo por Vencimiento Próximo (< 30 días)","activo":false},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"230b95ccf44561cd62e0c405d2de11060e69398218b6b710984bbbf2b2360ca1"},{"_id":"d05e4fedf2e17b2c70e825f6","evento":"BAJA_SANITARIA_POR_CADUCIDAD","marca_tiempo":"2026-11-15T18:40:10-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"id_lote":4,"lote_codigo":"LOT-2024-003","medicamento":"Paracetamol 500mg","ubicacion_origen":"VITRINA","motivo_baja":"Retiro Preventivo por Vencimiento Próximo (< 30 días)","activo":false},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"e1b70b602352e916bb06f9f845c4d8607209c8b3f57650f3e0a555496b21e55b"},{"_id":"ebbca13313435f42815fca1f","evento":"BAJA_SANITARIA_POR_CADUCIDAD","marca_tiempo":"2026-11-15T18:40:06-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"id_lote":3,"lote_codigo":"LOT-2024-005","medicamento":"Clonazepam 2mg","ubicacion_origen":"VITRINA","motivo_baja":"Retiro Preventivo por Vencimiento Próximo (< 30 días)","activo":false},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"49e2c0ac59e5b7981964641b4d99315de883f6c54a1f777aec63812bfc8c1bd7"},{"_id":"7ae8ed171bf2becd72d358ce","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T17:05:38-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"rol":"administrador","usuario":"María Salinas"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"c9aa3e8628daea581f334ea67a062b6c128b41cdd5b9c118e8bbd7d25f846ebb"},{"_id":"dc56ee39b133f4a92b1436d6","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T17:05:03-03:00","usuario_qf":{"id_usuario":2,"rut":"11.222.333-4","nombre":"Dr. Carlos Vega"},"datos_dispensacion":{"rol":"quimico_farmaceutico","usuario":"Dr. Carlos Vega"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"0fa29a77a1b7f900c292d546fed29dc3a391a9c03c54fb50d76a1806d418c56e"},{"_id":"3bdf34ff2d4470db9b14bd5d","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T17:04:47-03:00","usuario_qf":{"id_usuario":3,"rut":"15.432.876-5","nombre":"Luis Pinto"},"datos_dispensacion":{"rol":"bodeguero","usuario":"Luis Pinto"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"d0c1ba3ed58d092bb1391916d825649a28d0dce013cb724bbd3109359525272f"},{"_id":"b0a2716b7129bd49832a4ade","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T16:59:47-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"rol":"administrador","usuario":"María Salinas"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"6d6f543a831cbaadea6c9f47b47cfd962465a4132368e2b48679b5134655afcd"},{"_id":"9c70b6a86846abda9077246a","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T16:59:17-03:00","usuario_qf":{"id_usuario":2,"rut":"11.222.333-4","nombre":"Dr. Carlos Vega"},"datos_dispensacion":{"rol":"quimico_farmaceutico","usuario":"Dr. Carlos Vega"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"85d7d567ebc58c5c6109d73fba6c822581f0796c106b852f717fb93d08a5438d"},{"_id":"9aab80a9caa4da9ef2f0c5e6","evento":"ACTUALIZACION_CONVENIO_SALUD","marca_tiempo":"2026-11-15T16:50:21-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"id_convenio":2,"nombre_convenio":"Fonasa A","porcentaje_descuento":58,"fecha_inicio":"2026-01-01","fecha_fin":"2026-12-01","activo":true},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"62da6724e6a88a185be6efd1745a34243d539048213350fbcf2431cce3c3a9ff"},{"_id":"ad274f103cb864c16cee4c3e","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T16:49:46-03:00","usuario_qf":{"id_usuario":4,"rut":"10.111.222-3","nombre":"María Salinas"},"datos_dispensacion":{"rol":"administrador","usuario":"María Salinas"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"d55ea98fa3a5b8d184593ab3cd523a56765f99efad7a85bc81ede0ce286f7f05"},{"_id":"caaa607f4abb8277213ae530","evento":"ACCESO_RAPIDO_DEMO_ROL","marca_tiempo":"2026-11-15T16:49:37-03:00","usuario_qf":{"id_usuario":1,"rut":"12.345.678-5","nombre":"Ana Torres"},"datos_dispensacion":{"rol":"vendedor","usuario":"Ana Torres"},"contexto_red":{"ip_origen":"127.0.0.1","user_agent":"Mozilla\/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit\/537.36 (KHTML, like Gecko) Chrome\/157.0.0.0 Safari\/537.36","terminal_id":"POS-BOX-01"},"hash_bloque":"27469e5652604e876883a669ba35c4d94676b9ab512535f4fe4b5be54288486a"}]};
+
+const ROLES_USER = {
+    administrador: { nombre: 'María Salinas', rut: '10.111.222-3', label: 'Administrador', badge: 'bg-purple-600/30 text-purple-300 border-purple-400/30', home: 'dashboard' },
+    quimico_farmaceutico: { nombre: 'Dr. Carlos Vega', rut: '11.222.333-4', label: 'Q. Farmacéutico', badge: 'bg-emerald-600/30 text-emerald-300 border-emerald-400/30', home: 'autorizaciones' },
+    bodeguero: { nombre: 'Pedro Morales', rut: '15.432.876-5', label: 'Bodeguero', badge: 'bg-amber-600/30 text-amber-300 border-amber-400/30', home: 'inventario' },
+    vendedor: { nombre: 'Juan Pérez', rut: '12.345.678-5', label: 'Vendedor', badge: 'bg-blue-600/30 text-blue-300 border-blue-400/30', home: 'pos' }
+};
+
+let state = {
+    role: 'administrador',
+    view: 'inventario',
+    invTab: 'VITRINA',
+    posSearch: '',
+    posCat: 'TODAS',
+    posOnlyCovered: false,
+    posConvenioId: 1,
+    posCart: [],
+    convEstado: 'todos'
+};
+
+function fmtClp(n) {
+    return '$' + Math.round(Number(n || 0)).toLocaleString('es-CL');
+}
+
+function showToast(msg, type = 'success') {
+    const c = document.getElementById('toast-container');
+    const styles = type === 'error'
+        ? 'bg-red-50 border-red-200 text-red-900'
+        : (type === 'warning' ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900');
+    const icon = type === 'error' ? '🚨' : (type === 'warning' ? '⚠️' : '✅');
+    c.innerHTML = `<div class="p-3.5 rounded-xl border ${styles} text-xs font-semibold flex items-center justify-between shadow-sm">
+        <span>${icon} ${msg}</span>
+        <button onclick="document.getElementById('toast-container').innerHTML=''" class="font-bold ml-4">✕</button>
+    </div>`;
+}
+
+function closeModal() {
+    document.getElementById('app-modal').classList.add('hidden');
+}
+
+function showLoginScreen() {
+    document.getElementById('app-shell').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function loginWithRole(role) {
+    state.role = role;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-shell').classList.remove('hidden');
+
+    const u = ROLES_USER[role];
+    document.getElementById('user-avatar').textContent = u.nombre.charAt(0);
+    document.getElementById('user-name').textContent = u.nombre;
+    document.getElementById('user-rut').textContent = u.rut;
+    const badge = document.getElementById('user-role-badge');
+    badge.className = 'inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-md border ' + u.badge;
+    badge.textContent = u.label;
+
+    ['vendedor', 'quimico_farmaceutico', 'bodeguero', 'administrador'].forEach(r => {
+        const b = document.getElementById('role-btn-' + r);
+        if (!b) return;
+        const activeColors = {
+            vendedor: 'bg-blue-600 text-white font-semibold',
+            quimico_farmaceutico: 'bg-emerald-600 text-white font-semibold',
+            bodeguero: 'bg-amber-600 text-white font-semibold',
+            administrador: 'bg-purple-600 text-white font-semibold'
+        };
+        b.className = 'w-full text-left px-2 py-1 rounded text-[10px] ' + (r === role ? activeColors[r] : 'bg-slate-800 text-slate-300 hover:bg-slate-700');
+    });
+
+    const allowed = getAllowedViews(role);
+    if (!allowed.includes(state.view)) {
+        state.view = u.home;
+    }
+    showToast(`Sesión activa como ${u.nombre} (${u.label}).`);
+    render();
+}
+
+function getAllowedViews(role) {
+    if (role === 'administrador') return ['dashboard', 'pos', 'autorizaciones', 'inventario', 'convenios', 'usuarios'];
+    if (role === 'quimico_farmaceutico') return ['pos', 'autorizaciones', 'inventario', 'convenios'];
+    if (role === 'bodeguero') return ['inventario'];
+    return ['pos', 'inventario', 'convenios'];
+}
+
+function navigate(view) {
+    state.view = view;
+    render();
+}
+
+function recomputeMedStocks() {
+    DB.medications.forEach(m => {
+        let vit = 0, bod = 0;
+        DB.batches.forEach(b => {
+            if (b.id_medicamento === m.id_medicamento && b.activo && b.dias_restantes > 0 && b.cantidad > 0) {
+                if (b.ubicacion === 'VITRINA') vit += b.cantidad;
+                if (b.ubicacion === 'BODEGA') bod += b.cantidad;
+            }
+        });
+        m.stock_vitrina = vit;
+        m.stock_bodega = bod;
+    });
+}
+
+function renderSidebar() {
+    const allowed = getAllowedViews(state.role);
+    const pendingCount = DB.ispLogs.filter(x => x.estado === 'PENDIENTE').length;
+    document.getElementById('top-pending-count').textContent = pendingCount;
+    const topBadge = document.getElementById('top-pending-badge');
+    if (pendingCount > 0 && (state.role === 'administrador' || state.role === 'quimico_farmaceutico')) {
+        topBadge.classList.remove('hidden');
+    } else {
+        topBadge.classList.add('hidden');
+    }
+
+    const items = [
+        { id: 'dashboard', label: '📊 Dashboard' },
+        { id: 'pos', label: '🛒 Punto de Venta' },
+        { id: 'autorizaciones', label: '🛡️ Autorización', badge: pendingCount },
+        { id: 'inventario', label: '📦 Inventario' },
+        { id: 'convenios', label: '🏥 Convenios' },
+        { id: 'usuarios', label: '👥 Usuarios' }
+    ].filter(i => allowed.includes(i.id));
+
+    document.getElementById('sidebar-nav').innerHTML = items.map(i => `
+        <button onclick="navigate('${i.id}')"
+                class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition ${state.view === i.id ? 'bg-[#1E40AF] text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}">
+            <span class="flex items-center gap-2.5">${i.label}</span>
+            ${i.badge ? `<span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#EF4444] text-white animate-pulse-badge">${i.badge}</span>` : ''}
+        </button>
+    `).join('');
+}
+
+function render() {
+    recomputeMedStocks();
+    renderSidebar();
+    const container = document.getElementById('main-content');
+    if (state.view === 'dashboard') container.innerHTML = renderDashboard();
+    else if (state.view === 'pos') container.innerHTML = renderPos();
+    else if (state.view === 'autorizaciones') container.innerHTML = renderAutorizaciones();
+    else if (state.view === 'inventario') container.innerHTML = renderInventario();
+    else if (state.view === 'convenios') container.innerHTML = renderConvenios();
+    else if (state.view === 'usuarios') container.innerHTML = renderUsuarios();
+}
+
+/* ==================== 1. INVENTARIO ==================== */
+function renderInventario() {
+    const canManageStock = ['bodeguero', 'administrador'].includes(state.role);
+    const canManageMeds = ['quimico_farmaceutico', 'administrador'].includes(state.role);
+    const canToggleLote = canManageStock || canManageMeds;
+
+    const alertasCount = DB.batches.filter(b => b.activo && b.cantidad > 0 && b.dias_restantes <= 30).length;
+    const bajasCount = DB.batches.filter(b => b.cantidad > 0 && (!b.activo || b.dias_restantes <= 0)).length;
+
+    let topButtons = `<span class="px-3.5 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold flex items-center gap-1.5">⚠️ ${alertasCount} lotes próx. a vencer</span>`;
+    if (state.invTab === 'CATALOGO') {
+        if (canManageMeds) {
+            topButtons += `<button onclick="openNewMedModal()" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition">💊 + Nuevo Producto al Catálogo</button>`;
+        }
+    } else {
+        if (canToggleLote) {
+            topButtons += `<button onclick="openRetiroVitrinaModal()" class="px-3.5 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold shadow-sm transition">↓ Retirar Vitrina &rarr; Bodega</button>`;
+        }
+        if (canManageStock) {
+            topButtons += `<button onclick="openTraspasoBodegaModal()" class="px-3.5 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">↑ Traspaso Bodega &rarr; Vitrina</button>`;
+            topButtons += `<button onclick="openIngresoLoteModal()" class="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">📦 + Ingresar Lote (Stock)</button>`;
+        }
+    }
+
+    const tabs = [
+        { id: 'VITRINA', label: '🏪 Vitrina' },
+        { id: 'BODEGA', label: '📦 Bodega' },
+        { id: 'TODOS', label: '📋 Todos los Lotes' },
+        { id: 'BAJAS', label: `🗑️ Bajas y Caducados (${bajasCount})`, red: true },
+        { id: 'CATALOGO', label: `💊 Catálogo y Recetas (${DB.medications.length})`, blue: true }
+    ].map(t => {
+        const active = state.invTab === t.id;
+        const cls = active
+            ? (t.red ? 'bg-red-50 border-red-300 text-red-800 shadow-sm' : (t.blue ? 'bg-white border-blue-300 text-[#1E40AF] shadow-sm' : 'bg-white border-slate-300 text-slate-900 shadow-sm'))
+            : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800';
+        return `<button onclick="state.invTab='${t.id}'; render();" class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 ${cls}">${t.label}</button>`;
+    }).join('');
+
+    let bodyHtml = '';
+    if (state.invTab === 'CATALOGO') {
+        const rows = DB.medications.map(m => `
+            <tr class="hover:bg-slate-50/80 ${!m.activo ? 'bg-slate-50/60 opacity-70' : ''}">
+                <td class="py-3.5 px-4 font-mono-code text-[11px] text-slate-500 whitespace-nowrap">${m.codigo_barras}</td>
+                <td class="py-3.5 px-4">
+                    <div class="font-bold ${m.activo ? 'text-slate-900' : 'text-slate-400 line-through'}">${m.nombre_comercial}</div>
+                    <div class="text-[11px] text-slate-400">${m.principio_activo}</div>
+                </td>
+                <td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">${m.laboratorio}</td>
+                <td class="py-3.5 px-4 text-right font-mono-code font-bold text-slate-900 whitespace-nowrap">${fmtClp(m.precio_unitario)}</td>
+                <td class="py-3.5 px-4 text-center font-mono-code text-[11px] whitespace-nowrap">
+                    <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold">${m.stock_vitrina} vit.</span>
+                    <span class="text-slate-300 mx-1">/</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">${m.stock_bodega} bod.</span>
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    ${m.requiere_receta
+                        ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 whitespace-nowrap">🔒 Retenida ISP</span>`
+                        : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">✓ Venta Libre</span>`}
+                </td>
+                <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${m.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">${m.activo ? 'ACTIVO' : 'DESHABILITADO'}</span>
+                </td>
+                ${canManageMeds ? `
+                <td class="py-3.5 px-5 text-right whitespace-nowrap">
+                    <button onclick="toggleMedPrescription(${m.id_medicamento})" class="px-2.5 py-1.5 rounded-lg border ${m.requiere_receta ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-800'} font-bold text-[11px] transition">
+                        ${m.requiere_receta ? 'Pasar a Venta Libre' : 'Exigir Receta ISP'}
+                    </button>
+                </td>` : ''}
+            </tr>
+        `).join('');
+
+        bodyHtml = `
+            <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex items-center justify-between">
+                <span>💊 Catálogo maestro de medicamentos y condición de venta.</span>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60 whitespace-nowrap">
+                                <th class="py-3.5 px-4">Código</th>
+                                <th class="py-3.5 px-4">Medicamento / Principio Activo</th>
+                                <th class="py-3.5 px-4">Laboratorio</th>
+                                <th class="py-3.5 px-4 text-right">Precio Venta</th>
+                                <th class="py-3.5 px-4 text-center">Stock (Vitrina / Bodega)</th>
+                                <th class="py-3.5 px-4 text-center">Condición Venta</th>
+                                <th class="py-3.5 px-4 text-center">Estado</th>
+                                ${canManageMeds ? '<th class="py-3.5 px-4 text-right">Acciones</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs">${rows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    } else {
+        let filtered = DB.batches.filter(b => b.cantidad > 0);
+        if (state.invTab === 'BAJAS') {
+            filtered = filtered.filter(b => !b.activo || b.dias_restantes <= 0);
+        } else {
+            filtered = filtered.filter(b => b.activo && (state.invTab === 'TODOS' || b.ubicacion === state.invTab));
+        }
+
+        const rows = filtered.length === 0
+            ? `<tr><td colspan="10" class="py-10 text-center text-slate-400 text-xs">${state.invTab === 'BAJAS' ? 'No hay lotes dados de baja por caducidad o merma sanitaria en este momento.' : 'No hay lotes activos en esta ubicación.'}</td></tr>`
+            : filtered.map(l => {
+                const isCrit = l.dias_restantes <= 30;
+                const isAlert = l.dias_restantes > 30 && l.dias_restantes <= 90;
+                const rowBg = !l.activo ? 'bg-red-50/30 opacity-85' : (isCrit ? 'bg-red-50/40 hover:bg-red-50/70' : (isAlert ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/80'));
+                const dotColor = !l.activo ? 'bg-red-400' : (isCrit ? 'bg-[#EF4444]' : (isAlert ? 'bg-amber-500' : 'bg-emerald-500'));
+                const fefoBadge = isCrit
+                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-[#EF4444] border border-red-200 whitespace-nowrap">● ${l.dias_restantes}d</span>`
+                    : (isAlert
+                        ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 whitespace-nowrap">▲ ${l.dias_restantes}d</span>`
+                        : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">✓ ${l.dias_restantes}d</span>`);
+
+                let actionBtns = '';
+                if (canToggleLote) {
+                    if (l.activo && l.ubicacion === 'VITRINA') {
+                        actionBtns += `<button onclick="openRetiroVitrinaModal(${l.id_lote})" class="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-[11px] transition">↓ Pasar a Bodega</button>`;
+                    } else if (l.activo && l.ubicacion === 'BODEGA' && canManageStock) {
+                        actionBtns += `<button onclick="openTraspasoBodegaModal(${l.id_lote})" class="px-2.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E40AF] font-bold text-[11px] transition">↑ Pasar a Vitrina</button>`;
+                    }
+                    if (l.activo) {
+                        actionBtns += `<button onclick="openBajaModal(${l.id_lote})" class="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-bold text-[11px] transition">${l.dias_restantes <= 30 ? '🗑️ Quitar por Caducado' : '🗑️ Dar de Baja'}</button>`;
+                    } else {
+                        actionBtns += `<button onclick="restoreBatch(${l.id_lote})" class="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition">↺ Restaurar a ${l.ubicacion}</button>`;
+                    }
+                }
+
+                return `
+                <tr class="${rowBg} transition">
+                    <td class="py-3.5 px-4 font-medium ${l.activo ? 'text-slate-900' : 'text-slate-500 line-through'} flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full ${dotColor} shrink-0"></span>
+                        <span>${l.medicamento}</span>
+                    </td>
+                    <td class="py-3.5 px-4 whitespace-nowrap">
+                        ${l.requiere_receta
+                            ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 whitespace-nowrap">🔒 Retenida</span>`
+                            : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 whitespace-nowrap">Venta Libre</span>`}
+                    </td>
+                    <td class="py-3.5 px-4 font-mono-code text-[11px] text-slate-500 whitespace-nowrap">
+                        <span class="inline-block px-2 py-0.5 rounded bg-slate-100 border border-slate-200 whitespace-nowrap">${l.lote_codigo}</span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-500 whitespace-nowrap">${l.laboratorio}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${l.ubicacion === 'VITRINA' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-300'}">${l.ubicacion}</span>
+                        ${!l.activo && l.motivo_baja ? `<div class="text-[10px] text-red-700 font-semibold mt-1">${l.motivo_baja}</div>` : ''}
+                    </td>
+                    <td class="py-3.5 px-4 text-center font-bold text-slate-900 whitespace-nowrap">${l.cantidad}</td>
+                    <td class="py-3.5 px-4 text-center font-mono-code text-slate-600 whitespace-nowrap">${l.fecha_vencimiento}</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">${fefoBadge}</td>
+                    <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${l.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">${l.activo ? 'DISPONIBLE' : 'DADO DE BAJA'}</span>
+                    </td>
+                    ${canToggleLote ? `<td class="py-3.5 px-4 text-right whitespace-nowrap"><div class="inline-flex items-center justify-end gap-1.5">${actionBtns}</div></td>` : ''}
+                </tr>`;
+            }).join('');
+
+        const banner = state.invTab === 'BAJAS'
+            ? `<div class="p-3 rounded-xl bg-red-50/90 border border-red-200 text-red-900 text-xs font-medium flex items-center gap-2"><span>🗑️</span><span><strong>Registro de Bajas y Productos Caducados:</strong> Lotes retirados de Vitrina y Bodega por vencimiento, merma o alerta sanitaria.</span></div>`
+            : `<div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex items-center gap-2"><span>⬇️</span><span>Lotes activos ordenados por fecha de vencimiento (FEFO): los primeros en expirar se muestran primero.</span></div>`;
+
+        bodyHtml = `
+            ${banner}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60 whitespace-nowrap">
+                                <th class="py-3.5 px-4">Medicamento</th>
+                                <th class="py-3.5 px-4">Condición Venta</th>
+                                <th class="py-3.5 px-4">Código Lote</th>
+                                <th class="py-3.5 px-4">Laboratorio</th>
+                                <th class="py-3.5 px-4">${state.invTab === 'BAJAS' ? 'Origen / Motivo de Baja' : 'Ubicación'}</th>
+                                <th class="py-3.5 px-4 text-center">Cantidad</th>
+                                <th class="py-3.5 px-4 text-center">Vencimiento</th>
+                                <th class="py-3.5 px-4 text-center">Alerta FEFO</th>
+                                <th class="py-3.5 px-4 text-center">Estado</th>
+                                ${canToggleLote ? '<th class="py-3.5 px-4 text-right">Acciones</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-xs">${rows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    }
+
+    return `
+    <div class="space-y-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario y Catálogo</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Control de lotes por vencimiento (FEFO), traspasos entre Vitrina y Bodega, y clasificación de recetas restringidas.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2.5">${topButtons}</div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">${tabs}</div>
+        ${bodyHtml}
+    </div>`;
+}
+
+function openBajaModal(idLote) {
+    const l = DB.batches.find(x => x.id_lote === idLote);
+    if (!l) return;
+    const modal = document.getElementById('app-modal');
+    const body = document.getElementById('app-modal-body');
+    const defMotivo = l.dias_restantes <= 0 ? 'Vencimiento / Producto Caducado' : (l.dias_restantes <= 30 ? 'Retiro Preventivo por Vencimiento Próximo' : 'Merma / Rotura o Deterioro de Envase');
+    body.innerHTML = `
+        <div class="bg-red-700 text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-sm">🗑️ Quitar por Caducado / Dar de Baja</h3>
+                <p class="text-[11px] text-red-100">Retira el lote de Vitrina o Bodega y lo mueve al registro de Bajas y Caducados</p>
+            </div>
+            <button onclick="closeModal()" class="text-white">✕</button>
+        </div>
+        <div class="p-5 space-y-4 text-xs">
+            <div class="p-3 rounded-xl bg-red-50 border border-red-200">
+                <div class="font-bold text-slate-900 text-sm">${l.medicamento}</div>
+                <div class="text-[11px] text-red-800 font-mono-code mt-0.5">Lote ${l.lote_codigo} • Ubicación: ${l.ubicacion} • ${l.cantidad} u.</div>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Motivo de Baja</label>
+                <select id="modal-baja-motivo" class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white">
+                    <option value="Vencimiento / Producto Caducado" ${defMotivo==='Vencimiento / Producto Caducado'?'selected':''}>Vencimiento / Producto Caducado</option>
+                    <option value="Retiro Preventivo por Vencimiento Próximo" ${defMotivo==='Retiro Preventivo por Vencimiento Próximo'?'selected':''}>Retiro Preventivo por Vencimiento Próximo</option>
+                    <option value="Merma / Rotura o Deterioro de Envase" ${defMotivo==='Merma / Rotura o Deterioro de Envase'?'selected':''}>Merma / Rotura o Deterioro de Envase</option>
+                    <option value="Alerta Sanitaria / Retiro de Lote ISP">Alerta Sanitaria / Retiro de Lote ISP</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                <button onclick="confirmBaja(${l.id_lote})" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold">Confirmar Baja</button>
+            </div>
+        </div>`;
+    modal.classList.remove('hidden');
+}
+
+function confirmBaja(idLote) {
+    const l = DB.batches.find(x => x.id_lote === idLote);
+    if (!l) return;
+    const motivo = document.getElementById('modal-baja-motivo').value;
+    l.activo = false;
+    l.motivo_baja = motivo;
+    closeModal();
+    showToast(`Lote ${l.lote_codigo} (${l.medicamento}) retirado de ${l.ubicacion} y movido a 'Bajas y Caducados' (${motivo}).`);
+    render();
+}
+
+function restoreBatch(idLote) {
+    const l = DB.batches.find(x => x.id_lote === idLote);
+    if (!l) return;
+    l.activo = true;
+    l.motivo_baja = null;
+    showToast(`Lote ${l.lote_codigo} (${l.medicamento}) restaurado a ${l.ubicacion}.`);
+    render();
+}
+
+function openRetiroVitrinaModal(preId) {
+    const vitBatches = DB.batches.filter(b => b.activo && b.ubicacion === 'VITRINA' && b.cantidad > 0);
+    if (vitBatches.length === 0) return showToast('No hay lotes en Vitrina para retirar.', 'warning');
+    const selected = preId ? vitBatches.find(x => x.id_lote === preId) || vitBatches[0] : vitBatches[0];
+    const modal = document.getElementById('app-modal');
+    const body = document.getElementById('app-modal-body');
+    body.innerHTML = `
+        <div class="bg-amber-600 text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-sm">↓ Retirar o Devolver Vitrina &rarr; Bodega</h3>
+                <p class="text-[11px] text-amber-100">Retira unidades o quita completamente el lote de la vitrina de ventas</p>
+            </div>
+            <button onclick="closeModal()" class="text-white">✕</button>
+        </div>
+        <div class="p-5 space-y-4 text-xs">
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Lote Actualmente en Vitrina</label>
+                <select id="retiro-lote-id" class="w-full px-3 py-2.5 rounded-lg border border-slate-300">
+                    ${vitBatches.map(b => `<option value="${b.id_lote}" ${b.id_lote===selected.id_lote?'selected':''}>${b.medicamento} — ${b.lote_codigo} (En vitrina: ${b.cantidad} u.)</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Cantidad de Unidades a Retirar</label>
+                <input type="number" id="retiro-cant" value="${selected.cantidad}" min="1" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code font-bold">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                <button onclick="confirmRetiroVitrina()" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold">Confirmar Retiro a Bodega</button>
+            </div>
+        </div>`;
+    modal.classList.remove('hidden');
+}
+
+function confirmRetiroVitrina() {
+    const idLote = Number(document.getElementById('retiro-lote-id').value);
+    const cant = Number(document.getElementById('retiro-cant').value);
+    const l = DB.batches.find(x => x.id_lote === idLote);
+    if (!l || cant <= 0 || cant > l.cantidad) return showToast('Cantidad inválida.', 'error');
+    l.cantidad -= cant;
+    let bod = DB.batches.find(x => x.lote_codigo === l.lote_codigo && x.ubicacion === 'BODEGA');
+    if (bod) bod.cantidad += cant;
+    else DB.batches.push({ ...l, id_lote: Date.now(), ubicacion: 'BODEGA', cantidad: cant });
+    closeModal();
+    showToast(`Retiro completado: ${cant} u. de ${l.medicamento} traspasadas desde Vitrina hacia Bodega.`);
+    render();
+}
+
+function openTraspasoBodegaModal(preId) {
+    const bodBatches = DB.batches.filter(b => b.activo && b.ubicacion === 'BODEGA' && b.cantidad > 0 && b.dias_restantes > 0);
+    if (bodBatches.length === 0) return showToast('No hay lotes disponibles en Bodega.', 'warning');
+    const selected = preId ? bodBatches.find(x => x.id_lote === preId) || bodBatches[0] : bodBatches[0];
+    const modal = document.getElementById('app-modal');
+    const body = document.getElementById('app-modal-body');
+    body.innerHTML = `
+        <div class="bg-[#1E40AF] text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-sm">↑ Traspaso Bodega &rarr; Vitrina</h3>
+                <p class="text-[11px] text-blue-200">Prioriza automáticamente los lotes con vencimiento más próximo</p>
+            </div>
+            <button onclick="closeModal()" class="text-white">✕</button>
+        </div>
+        <div class="p-5 space-y-4 text-xs">
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Lote Disponible en Bodega</label>
+                <select id="traspaso-lote-id" class="w-full px-3 py-2.5 rounded-lg border border-slate-300">
+                    ${bodBatches.map(b => `<option value="${b.id_lote}" ${b.id_lote===selected.id_lote?'selected':''}>${b.medicamento} — ${b.lote_codigo} (Stock: ${b.cantidad} u. | Vence en ${b.dias_restantes}d)</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Cantidad a Traspasar</label>
+                <input type="number" id="traspaso-cant" value="${Math.min(25, selected.cantidad)}" min="1" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code font-bold">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                <button onclick="confirmTraspasoBodega()" class="px-4 py-2 rounded-lg bg-[#1E40AF] text-white font-bold">Confirmar Traspaso</button>
+            </div>
+        </div>`;
+    modal.classList.remove('hidden');
+}
+
+function confirmTraspasoBodega() {
+    const idLote = Number(document.getElementById('traspaso-lote-id').value);
+    const cant = Number(document.getElementById('traspaso-cant').value);
+    const l = DB.batches.find(x => x.id_lote === idLote);
+    if (!l || cant <= 0 || cant > l.cantidad) return showToast('Cantidad inválida.', 'error');
+    l.cantidad -= cant;
+    let vit = DB.batches.find(x => x.lote_codigo === l.lote_codigo && x.ubicacion === 'VITRINA');
+    if (vit) vit.cantidad += cant;
+    else DB.batches.push({ ...l, id_lote: Date.now(), ubicacion: 'VITRINA', cantidad: cant });
+    closeModal();
+    showToast(`Traspaso exitoso: ${cant} unidades movidas a VITRINA (Lote ${l.lote_codigo}).`);
+    render();
+}
+
+function openIngresoLoteModal() {
+    const modal = document.getElementById('app-modal');
+    const body = document.getElementById('app-modal-body');
+    body.innerHTML = `
+        <div class="bg-[#10B981] text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-sm">📦 + Ingresar Lote de Stock</h3>
+                <p class="text-[11px] text-emerald-100">Abastecimiento de unidades de un medicamento del catálogo</p>
+            </div>
+            <button onclick="closeModal()" class="text-white">✕</button>
+        </div>
+        <div class="p-5 space-y-3.5 text-xs">
+            <div>
+                <label class="block font-bold text-slate-700 mb-1">Medicamento del Catálogo</label>
+                <select id="ingreso-med-id" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    ${DB.medications.map(m => `<option value="${m.id_medicamento}">${m.nombre_comercial} (${m.laboratorio})</option>`).join('')}
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Código de Lote</label>
+                    <input type="text" id="ingreso-codigo" value="LOT-2026-${Math.floor(300+Math.random()*600)}" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Ubicación Inicial</label>
+                    <select id="ingreso-ubic" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                        <option value="BODEGA">BODEGA</option>
+                        <option value="VITRINA">VITRINA</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Cantidad Unidades</label>
+                    <input type="number" id="ingreso-cant" value="80" min="1" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Días para Vencimiento</label>
+                    <input type="number" id="ingreso-dias" value="240" min="10" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                <button onclick="confirmIngresoLote()" class="px-4 py-2 rounded-lg bg-[#10B981] text-white font-bold">Registrar Lote</button>
+            </div>
+        </div>`;
+    modal.classList.remove('hidden');
+}
+
+function confirmIngresoLote() {
+    const idMed = Number(document.getElementById('ingreso-med-id').value);
+    const m = DB.medications.find(x => x.id_medicamento === idMed);
+    const cod = document.getElementById('ingreso-codigo').value.trim();
+    const ubic = document.getElementById('ingreso-ubic').value;
+    const cant = Number(document.getElementById('ingreso-cant').value);
+    const dias = Number(document.getElementById('ingreso-dias').value);
+    DB.batches.push({
+        id_lote: Date.now(),
+        id_medicamento: m.id_medicamento,
+        medicamento: m.nombre_comercial,
+        laboratorio: m.laboratorio,
+        requiere_receta: m.requiere_receta,
+        lote_codigo: cod,
+        ubicacion: ubic,
+        cantidad: cant,
+        fecha_vencimiento: '15-07-2027',
+        dias_restantes: dias,
+        semaforo_fefo: dias <= 30 ? 'critico' : (dias <= 90 ? 'alerta' : 'vigente'),
+        activo: true,
+        motivo_baja: null
+    });
+    closeModal();
+    showToast(`Lote ${cod} (${m.nombre_comercial}) ingresado en ${ubic}.`);
+    render();
+}
+
+function openNewMedModal() {
+    const modal = document.getElementById('app-modal');
+    const body = document.getElementById('app-modal-body');
+    body.innerHTML = `
+        <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-sm">+ Registrar Nuevo Medicamento</h3>
+                <p class="text-[11px] text-slate-300">Incorpora un nuevo producto al catálogo de la farmacia</p>
+            </div>
+            <button onclick="closeModal()" class="text-white">✕</button>
+        </div>
+        <div class="p-5 space-y-3.5 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
+                    <input type="text" id="newmed-nombre" placeholder="Ej: Melatonina 3mg" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
+                    <input type="text" id="newmed-pa" placeholder="Ej: Melatonina" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
+                    <input type="text" id="newmed-lab" value="Laboratorio Saval" class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Precio Unitario ($)</label>
+                    <input type="number" id="newmed-precio" value="6990" class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
+                </div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200">
+                <label class="block font-bold text-amber-950 mb-1">Condición de Venta</label>
+                <select id="newmed-receta" class="w-full px-3 py-2 rounded-lg border border-amber-300 bg-white font-semibold">
+                    <option value="0">✓ Venta Libre</option>
+                    <option value="1">🔒 Receta Retenida</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                <button onclick="confirmNewMed()" class="px-4 py-2 rounded-lg bg-slate-900 text-white font-bold">Guardar Medicamento</button>
+            </div>
+        </div>`;
+    modal.classList.remove('hidden');
+}
+
+function confirmNewMed() {
+    const nombre = document.getElementById('newmed-nombre').value.trim();
+    const pa = document.getElementById('newmed-pa').value.trim();
+    const lab = document.getElementById('newmed-lab').value.trim();
+    const precio = Number(document.getElementById('newmed-precio').value);
+    const rec = document.getElementById('newmed-receta').value === '1';
+    if (!nombre) return showToast('Ingrese el nombre comercial.', 'error');
+    const newId = Date.now();
+    DB.medications.push({
+        id_medicamento: newId,
+        codigo_barras: '78000010' + Math.floor(1000+Math.random()*8999),
+        nombre_comercial: nombre,
+        principio_activo: pa || nombre,
+        laboratorio: lab || 'Laboratorio Chile',
+        categoria: 'General',
+        precio_unitario: precio,
+        requiere_receta: rec,
+        activo: true,
+        stock_vitrina: 40,
+        stock_bodega: 0
+    });
+    DB.batches.push({
+        id_lote: newId + 1,
+        id_medicamento: newId,
+        medicamento: nombre,
+        laboratorio: lab || 'Laboratorio Chile',
+        requiere_receta: rec,
+        lote_codigo: 'LOT-2026-901',
+        ubicacion: 'VITRINA',
+        cantidad: 40,
+        fecha_vencimiento: '15-08-2027',
+        dias_restantes: 270,
+        semaforo_fefo: 'vigente',
+        activo: true,
+        motivo_baja: null
+    });
+    closeModal();
+    showToast(`Medicamento '${nombre}' registrado en el catálogo con lote inicial de 40 u.`);
+    render();
+}
+
+function toggleMedPrescription(idMed) {
+    const m = DB.medications.find(x => x.id_medicamento === idMed);
+    if (!m) return;
+    m.requiere_receta = !m.requiere_receta;
+    DB.batches.filter(b => b.id_medicamento === idMed).forEach(b => b.requiere_receta = m.requiere_receta);
+    showToast(`'${m.nombre_comercial}' cambió a ${m.requiere_receta ? 'Receta Retenida ISP' : 'Venta Libre'}.`);
+    render();
+}
+
+/* ==================== 2. PUNTO DE VENTA (POS) ==================== */
+function renderPos() {
+    const conv = DB.convenios.find(c => c.id_convenio === Number(state.posConvenioId)) || DB.convenios[0];
+    const cats = ['TODAS', ...new Set(DB.medications.map(m => m.categoria))];
+
+    const isCovered = (med) => {
+        if (!conv || conv.porcentaje_descuento <= 0) return false;
+        if (conv.aplica_todo_catalogo) return true;
+        return conv.medicamentos_ids.includes(med.id_medicamento);
+    };
+
+    const meds = DB.medications.filter(m => {
+        if (!m.activo) return false;
+        if (state.posCat !== 'TODAS' && m.categoria !== state.posCat) return false;
+        if (state.posOnlyCovered && !isCovered(m)) return false;
+        if (state.posSearch) {
+            const q = state.posSearch.toLowerCase();
+            return m.nombre_comercial.toLowerCase().includes(q) || m.principio_activo.toLowerCase().includes(q) || m.codigo_barras.includes(q);
+        }
+        return true;
+    });
+
+    let subtotal = 0, descuentoTotal = 0, hasRetained = false;
+    const cartRows = state.posCart.map(item => {
+        const m = DB.medications.find(x => x.id_medicamento === item.id_medicamento);
+        if (!m) return '';
+        if (m.requiere_receta) hasRetained = true;
+        const lineSub = m.precio_unitario * item.cantidad;
+        const cubierto = isCovered(m);
+        const lineDesc = cubierto ? Math.round(lineSub * (conv.porcentaje_descuento / 100)) : 0;
+        subtotal += lineSub;
+        descuentoTotal += lineDesc;
+        return `
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+            <div>
+                <div class="font-bold text-slate-900 text-xs">${m.nombre_comercial} ${m.requiere_receta ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold">🔒 Retenida</span>' : ''}</div>
+                <div class="text-[11px] text-slate-500 font-mono-code">${fmtClp(m.precio_unitario)} x ${item.cantidad} = ${fmtClp(lineSub)}</div>
+                ${conv.porcentaje_descuento > 0 ? (cubierto
+                    ? `<div class="text-[10px] text-emerald-700 font-bold">✓ Bonifica -${conv.porcentaje_descuento}% (-${fmtClp(lineDesc)})</div>`
+                    : `<div class="text-[10px] text-slate-400">Sin cobertura en ${conv.nombre_convenio}</div>`) : ''}
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="updateCartQty(${m.id_medicamento}, -1)" class="w-6 h-6 rounded bg-white border border-slate-300 font-bold">-</button>
+                <span class="px-2 font-mono-code font-bold text-xs">${item.cantidad}</span>
+                <button onclick="updateCartQty(${m.id_medicamento}, 1)" class="w-6 h-6 rounded bg-white border border-slate-300 font-bold">+</button>
+            </div>
+        </div>`;
+    }).join('');
+
+    const total = subtotal - descuentoTotal;
+
+    return `
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-900">Terminal Punto de Venta (POS)</h1>
+                        <p class="text-xs text-slate-500">Dispensación FEFO desde Vitrina y cálculo de copago por medicamento cubierto.</p>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-xs font-semibold text-[#1E40AF] cursor-pointer">
+                        <input type="checkbox" ${state.posOnlyCovered ? 'checked' : ''} onchange="state.posOnlyCovered=this.checked; render();" class="rounded border-slate-300">
+                        Solo cubiertos por convenio activo
+                    </label>
+                </div>
+                <input type="text" value="${state.posSearch}" oninput="state.posSearch=this.value; render();" placeholder="🔍 Buscar por nombre comercial, principio activo o código de barras..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs">
+                <div class="flex flex-wrap gap-1.5">
+                    ${cats.map(cat => `<button onclick="state.posCat='${cat}'; render();" class="px-2.5 py-1 rounded-lg text-[11px] font-bold border ${state.posCat===cat ? 'bg-[#1E40AF] text-white border-[#1E40AF]' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}">${cat}</button>`).join('')}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                ${meds.map(m => {
+                    const cub = isCovered(m);
+                    return `
+                    <div class="bg-white rounded-xl border ${m.requiere_receta ? 'border-red-200' : 'border-slate-200'} p-3.5 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between gap-1 mb-1">
+                                <span class="text-[10px] font-mono-code text-slate-400">${m.codigo_barras}</span>
+                                ${m.requiere_receta
+                                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">🔒 Retenida</span>`
+                                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">Venta Libre</span>`}
+                            </div>
+                            <div class="font-bold text-xs text-slate-900">${m.nombre_comercial}</div>
+                            <div class="text-[11px] text-slate-400">${m.principio_activo} • ${m.laboratorio}</div>
+                            ${conv.porcentaje_descuento > 0 ? (cub
+                                ? `<div class="mt-1.5 inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">✓ Cubierto -${conv.porcentaje_descuento}% (${conv.nombre_convenio})</div>`
+                                : `<div class="mt-1.5 inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-400 text-[10px]">No cubierto por ${conv.nombre_convenio}</div>`) : ''}
+                        </div>
+                        <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                            <div>
+                                <div class="font-mono-code font-extrabold text-sm text-slate-900">${fmtClp(m.precio_unitario)}</div>
+                                <div class="text-[10px] ${m.stock_vitrina > 0 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-bold'}">Vitrina: ${m.stock_vitrina} u.</div>
+                            </div>
+                            <button onclick="addToCart(${m.id_medicamento})" ${m.stock_vitrina <= 0 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg ${m.stock_vitrina > 0 ? 'bg-[#1E40AF] hover:bg-blue-800 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'} text-xs font-bold transition">
+                                + Agregar
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+
+        <!-- Carrito y Liquidación -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between h-fit sticky top-16 space-y-4">
+            <div class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h2 class="font-bold text-sm text-slate-900">🛒 Detalle de Venta</h2>
+                    ${state.posCart.length > 0 ? `<button onclick="state.posCart=[]; render();" class="text-[11px] text-red-600 font-semibold hover:underline">Vaciar</button>` : ''}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Convenio de Salud / Previsión</label>
+                    <select onchange="state.posConvenioId=Number(this.value); render();" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                        ${DB.convenios.filter(c => c.activo && c.estado_vigencia === 'VIGENTE').map(c => `<option value="${c.id_convenio}" ${c.id_convenio===conv.id_convenio?'selected':''}>${c.nombre_convenio} (${c.porcentaje_descuento}% bonif.)</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="space-y-2 max-h-72 overflow-y-auto">
+                    ${state.posCart.length === 0 ? `<div class="py-10 text-center text-slate-400 text-xs">Seleccione medicamentos del catálogo para iniciar la venta.</div>` : cartRows}
+                </div>
+            </div>
+
+            <div class="border-t border-slate-200 pt-4 space-y-2 text-xs">
+                <div class="flex justify-between text-slate-500"><span>Subtotal Bruto:</span><span class="font-mono-code font-semibold">${fmtClp(subtotal)}</span></div>
+                <div class="flex justify-between text-emerald-700 font-semibold"><span>Bonificación Convenio:</span><span class="font-mono-code">-${fmtClp(descuentoTotal)}</span></div>
+                <div class="flex justify-between text-base font-extrabold text-slate-900 pt-2 border-t border-slate-100"><span>Total Copago a Pagar:</span><span class="font-mono-code text-[#1E40AF]">${fmtClp(total)}</span></div>
+
+                ${hasRetained ? `
+                    <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-[11px] space-y-2 mt-2">
+                        <div class="font-bold">🔒 Bloqueo Sanitario ISP: Receta Retenida</div>
+                        <div>El carrito incluye medicamentos controlados. Requiere autorización con PIN del Químico Farmacéutico (PIN demo: <code>4421</code>).</div>
+                        <input type="password" id="pos-pin-qf" placeholder="Ingrese PIN Q.F. (4421)" class="w-full px-3 py-1.5 rounded-lg border border-red-300 bg-white font-mono-code">
+                    </div>` : ''}
+
+                <button onclick="checkoutPos()" ${state.posCart.length===0?'disabled':''} class="w-full py-3 rounded-xl ${state.posCart.length>0 ? 'bg-[#10B981] hover:bg-emerald-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'} font-bold text-xs shadow-sm transition mt-2">
+                    Emitir Boleta y Descontar FEFO
+                </button>
+            </div>
+        </div>
+    </div>`;
+}
+
+function addToCart(idMed) {
+    const m = DB.medications.find(x => x.id_medicamento === idMed);
+    if (!m || m.stock_vitrina <= 0) return;
+    const item = state.posCart.find(i => i.id_medicamento === idMed);
+    if (item) {
+        if (item.cantidad + 1 > m.stock_vitrina) return showToast('Supera el stock disponible en Vitrina.', 'warning');
+        item.cantidad++;
+    } else {
+        state.posCart.push({ id_medicamento: idMed, cantidad: 1 });
+    }
+    render();
+}
+
+function updateCartQty(idMed, delta) {
+    const idx = state.posCart.findIndex(i => i.id_medicamento === idMed);
+    if (idx === -1) return;
+    const m = DB.medications.find(x => x.id_medicamento === idMed);
+    const next = state.posCart[idx].cantidad + delta;
+    if (next <= 0) state.posCart.splice(idx, 1);
+    else if (next <= m.stock_vitrina) state.posCart[idx].cantidad = next;
+    render();
+}
+
+function checkoutPos() {
+    const hasRetained = state.posCart.some(i => DB.medications.find(m => m.id_medicamento === i.id_medicamento)?.requiere_receta);
+    if (hasRetained) {
+        const pin = document.getElementById('pos-pin-qf')?.value || '';
+        if (pin !== '4421') {
+            return showToast('Bloqueo ISP: Debe ingresar el PIN del Químico Farmacéutico (4421) para dispensar medicamentos con Receta Retenida.', 'error');
+        }
+    }
+
+    const conv = DB.convenios.find(c => c.id_convenio === Number(state.posConvenioId)) || DB.convenios[0];
+    let subtotal = 0, desc = 0;
+    const resumen = [];
+
+    state.posCart.forEach(item => {
+        const m = DB.medications.find(x => x.id_medicamento === item.id_medicamento);
+        const lineSub = m.precio_unitario * item.cantidad;
+        const cub = conv.porcentaje_descuento > 0 && (conv.aplica_todo_catalogo || conv.medicamentos_ids.includes(m.id_medicamento));
+        subtotal += lineSub;
+        if (cub) desc += Math.round(lineSub * (conv.porcentaje_descuento / 100));
+        resumen.push(`${m.nombre_comercial} x${item.cantidad}`);
+
+        let rem = item.cantidad;
+        DB.batches.filter(b => b.id_medicamento === m.id_medicamento && b.activo && b.ubicacion === 'VITRINA' && b.cantidad > 0)
+            .sort((a, b) => a.dias_restantes - b.dias_restantes)
+            .forEach(b => {
+                if (rem <= 0) return;
+                const take = Math.min(b.cantidad, rem);
+                b.cantidad -= take;
+                rem -= take;
+            });
+    });
+
+    DB.sales.unshift({
+        id_venta: DB.sales.length + 101,
+        fecha_hora: new Date().toLocaleString('es-CL'),
+        vendedor: ROLES_USER[state.role].nombre,
+        convenio: conv.nombre_convenio,
+        subtotal: subtotal,
+        descuento_total: desc,
+        total: subtotal - desc,
+        items_resumen: resumen.join(', ')
+    });
+
+    state.posCart = [];
+    showToast(`Venta procesada con éxito. Total pagado: ${fmtClp(subtotal - desc)} (Descuento convenio: ${fmtClp(desc)}).`);
+    render();
+}
+
+/* ==================== 3. CONVENIOS DE SALUD ==================== */
+function renderConvenios() {
+    const canManage = state.role === 'administrador';
+    const list = DB.convenios.filter(c => {
+        if (state.convEstado === 'vigentes') return c.estado_vigencia === 'VIGENTE';
+        if (state.convEstado === 'deshabilitados') return !c.activo;
+        return true;
+    });
+
+    const rows = list.map(c => {
+        const pct = c.porcentaje_descuento;
+        const badgeClass = pct >= 80 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (pct >= 40 ? 'bg-blue-50 text-blue-700 border-blue-200' : (pct > 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'));
+        const estadoBadge = c.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700';
+
+        let medCol = '';
+        if (pct <= 0) medCol = `<span class="text-slate-400 text-[11px]">Venta particular sin bonificación</span>`;
+        else if (c.aplica_todo_catalogo) medCol = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 text-[#1E40AF] border border-blue-200 text-[11px] font-semibold">🌐 Todo el catálogo</span>`;
+        else {
+            const sample = c.medicamentos_nombres.slice(0, 5).map(n => `<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10px]">${n}</span>`).join('');
+            const more = c.medicamentos_nombres.length > 5 ? `<span class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-bold">+${c.medicamentos_nombres.length - 5} más</span>` : '';
+            medCol = `<div class="space-y-1">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold">💊 ${c.medicamentos_nombres.length} medicamentos cubiertos</span>
+                <div class="flex flex-wrap gap-1">${sample}${more}</div>
+            </div>`;
+        }
+
+        return `
+        <tr class="hover:bg-slate-50/80 ${!c.activo ? 'bg-slate-50/60 opacity-80' : ''}">
+            <td class="py-3.5 px-5">
+                <div class="font-bold ${c.activo ? 'text-slate-900' : 'text-slate-400 line-through'}">${c.nombre_convenio}</div>
+                ${pct > 0 ? `<div class="text-[11px] text-slate-400 mt-0.5">Ej. en $10.000 cubiertos &rarr; <span class="text-emerald-700 font-semibold">ahorra ${fmtClp(10000 * pct / 100)}</span></div>` : ''}
+            </td>
+            <td class="py-3.5 px-4 text-center"><span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badgeClass}">${pct}%</span></td>
+            <td class="py-3.5 px-5 max-w-md">${medCol}</td>
+            <td class="py-3.5 px-4 text-center font-mono-code text-[11px] text-slate-600 whitespace-nowrap">${c.fecha_inicio ? `${c.fecha_inicio} &rarr; ${c.fecha_fin || 'Indefinido'}` : 'Permanente'}</td>
+            <td class="py-3.5 px-4 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${estadoBadge}">${c.activo ? 'VIGENTE' : 'DESHABILITADO'}</span></td>
+            ${canManage ? `
+            <td class="py-3.5 px-5 text-right whitespace-nowrap">
+                ${pct <= 0 ? `<span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-400 text-[10px] font-semibold">Tarifa base</span>` : `
+                <div class="inline-flex items-center justify-end gap-1.5">
+                    <button onclick="toggleConvenioStatus(${c.id_convenio})" class="px-2.5 py-1.5 rounded-lg border ${c.activo ? 'border-red-200 bg-red-50/70 text-red-700' : 'border-emerald-200 bg-emerald-50/70 text-emerald-700'} font-bold text-[11px] transition">
+                        ${c.activo ? 'Deshabilitar' : 'Habilitar'}
+                    </button>
+                </div>`}
+            </td>` : ''}
+        </tr>`;
+    }).join('');
+
+    return `
+    <div class="space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Gestión de Convenios de Salud</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Administración de convenios, porcentajes de descuento, fechas de vigencia y medicamentos cubiertos.</p>
+            </div>
+            ${!canManage ? `<span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold">🔒 Modo Consulta (${ROLES_USER[state.role].label}) — Edición exclusiva Administrador</span>` : ''}
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60">
+                            <th class="py-3.5 px-5">Nombre del Convenio</th>
+                            <th class="py-3.5 px-4 text-center">Bonificación (%)</th>
+                            <th class="py-3.5 px-5">Medicamentos Cubiertos</th>
+                            <th class="py-3.5 px-4 text-center">Período de Vigencia</th>
+                            <th class="py-3.5 px-4 text-center">Estado</th>
+                            ${canManage ? '<th class="py-3.5 px-5 text-right">Acciones</th>' : ''}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+function toggleConvenioStatus(idConv) {
+    const c = DB.convenios.find(x => x.id_convenio === idConv);
+    if (!c) return;
+    c.activo = !c.activo;
+    c.estado_vigencia = c.activo ? 'VIGENTE' : 'DESHABILITADO';
+    showToast(`Convenio '${c.nombre_convenio}' ${c.activo ? 'habilitado' : 'deshabilitado'}.`);
+    render();
+}
+
+/* ==================== 4. AUTORIZACIONES ISP ==================== */
+function renderAutorizaciones() {
+    const rows = DB.ispLogs.map(r => `
+        <tr class="hover:bg-slate-50/80">
+            <td class="py-3.5 px-4 font-mono-code font-bold text-slate-700">${r.nro_folio_receta}</td>
+            <td class="py-3.5 px-4 font-bold text-slate-900">${r.medicamento} <span class="font-mono-code text-slate-500">(${r.cantidad_prescrita} u.)</span></td>
+            <td class="py-3.5 px-4"><div>${r.nombre_paciente}</div><div class="text-[10px] font-mono-code text-slate-400">${r.rut_paciente}</div></td>
+            <td class="py-3.5 px-4"><div>${r.nombre_medico}</div><div class="text-[10px] font-mono-code text-slate-400">${r.rut_medico}</div></td>
+            <td class="py-3.5 px-4 text-center">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${r.estado==='APROBADA' ? 'bg-emerald-100 text-emerald-800' : (r.estado==='PENDIENTE' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700')}">${r.estado}</span>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+                ${r.estado === 'PENDIENTE'
+                    ? `<button onclick="approveIsp(${r.id_registro})" class="px-3 py-1.5 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white font-bold text-[11px]">✍️ Visar con PIN Q.F. (4421)</button>`
+                    : `<span class="text-[11px] text-slate-500 font-mono-code">${r.qf_nombre} (${r.fecha})</span>`}
+            </td>
+        </tr>`).join('');
+
+    return `
+    <div class="space-y-5">
+        <div>
+            <h1 class="text-xl font-bold text-slate-900">Libro Oficial de Control ISP y Recetas Retenidas</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Fiscalización y visación electrónica del Químico Farmacéutico (D.S. N° 404 / N° 405 MINSAL).</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/60">
+                            <th class="py-3.5 px-4">Folio Receta</th>
+                            <th class="py-3.5 px-4">Medicamento Controlado</th>
+                            <th class="py-3.5 px-4">Paciente</th>
+                            <th class="py-3.5 px-4">Médico Prescriptor</th>
+                            <th class="py-3.5 px-4 text-center">Estado</th>
+                            <th class="py-3.5 px-4 text-right">Firma Sanitaria</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+function approveIsp(idReg) {
+    const r = DB.ispLogs.find(x => x.id_registro === idReg);
+    if (!r) return;
+    r.estado = 'APROBADA';
+    r.qf_nombre = 'Dr. Carlos Vega';
+    r.fecha = new Date().toLocaleString('es-CL');
+    showToast(`Receta Folio ${r.nro_folio_receta} (${r.medicamento}) visada electrónicamente por Dr. Carlos Vega.`);
+    render();
+}
+
+/* ==================== 5. DASHBOARD ==================== */
+function renderDashboard() {
+    const totalVentas = DB.sales.reduce((s, v) => s + v.total, 0);
+    const totalDescuentos = DB.sales.reduce((s, v) => s + v.descuento_total, 0);
+    const neto = Math.round(totalVentas / 1.19);
+    const iva = totalVentas - neto;
+    const lotesActivos = DB.batches.filter(b => b.activo && b.cantidad > 0).length;
+    const lotesCriticos = DB.batches.filter(b => b.activo && b.cantidad > 0 && b.dias_restantes <= 30).length;
+
+    return `
+    <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Dashboard de Gestión de Farmacia Privada</h1>
+                <p class="text-xs text-slate-500 mt-0.5">Indicadores comerciales (SII), control de inventario FEFO y auditoría sanitaria ISP.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="window.print()" class="px-4 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm">🖨️ Imprimir / Guardar PDF</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-bold text-slate-400 uppercase">Ingresos Totales (Copago)</div>
+                <div class="text-2xl font-extrabold text-slate-900 font-mono-code mt-1">${fmtClp(totalVentas)}</div>
+                <div class="text-[11px] text-slate-500 mt-1">Neto: ${fmtClp(neto)} • IVA (19%): ${fmtClp(iva)}</div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-bold text-slate-400 uppercase">Ahorro a Pacientes (Convenios)</div>
+                <div class="text-2xl font-extrabold text-emerald-600 font-mono-code mt-1">${fmtClp(totalDescuentos)}</div>
+                <div class="text-[11px] text-slate-500 mt-1">${DB.sales.length} boletas emitidas</div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="text-xs font-bold text-slate-400 uppercase">Catálogo y Stock Activo</div>
+                <div class="text-2xl font-extrabold text-[#1E40AF] font-mono-code mt-1">${DB.medications.length} prod.</div>
+                <div class="text-[11px] text-slate-500 mt-1">${lotesActivos} lotes activos en Vitrina/Bodega</div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-red-200 shadow-sm">
+                <div class="text-xs font-bold text-red-500 uppercase">Riesgo FEFO (&le; 30 días)</div>
+                <div class="text-2xl font-extrabold text-red-600 font-mono-code mt-1">${lotesCriticos} lotes</div>
+                <div class="text-[11px] text-slate-500 mt-1">Prioridad de salida o baja por caducado</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-200 bg-slate-50/60">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-700">Últimas Ventas y Boletas Registradas</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/40">
+                            <th class="py-3 px-4">Folio</th>
+                            <th class="py-3 px-4">Fecha / Hora</th>
+                            <th class="py-3 px-4">Vendedor</th>
+                            <th class="py-3 px-4">Convenio</th>
+                            <th class="py-3 px-4">Productos</th>
+                            <th class="py-3 px-4 text-right">Subtotal</th>
+                            <th class="py-3 px-4 text-right">Bonificación</th>
+                            <th class="py-3 px-4 text-right">Total Pagado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">
+                        ${DB.sales.map(v => `
+                            <tr class="hover:bg-slate-50/80">
+                                <td class="py-3 px-4 font-mono-code font-bold text-slate-700">#${v.id_venta}</td>
+                                <td class="py-3 px-4 font-mono-code text-slate-500">${v.fecha_hora}</td>
+                                <td class="py-3 px-4 font-semibold">${v.vendedor}</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-blue-50 text-[#1E40AF] font-semibold text-[11px]">${v.convenio}</span></td>
+                                <td class="py-3 px-4 text-slate-600">${v.items_resumen}</td>
+                                <td class="py-3 px-4 text-right font-mono-code">${fmtClp(v.subtotal)}</td>
+                                <td class="py-3 px-4 text-right font-mono-code text-emerald-700">-${fmtClp(v.descuento_total)}</td>
+                                <td class="py-3 px-4 text-right font-mono-code font-bold text-slate-900">${fmtClp(v.total)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+/* ==================== 6. USUARIOS ==================== */
+function renderUsuarios() {
+    const rows = DB.users.map(u => `
+        <tr class="hover:bg-slate-50/80 ${!u.activo ? 'bg-slate-50/60 opacity-75' : ''}">
+            <td class="py-3 px-5 font-mono-code text-slate-400">#${u.id_usuario}</td>
+            <td class="py-3 px-5 font-mono-code font-bold text-slate-900">${u.rut}</td>
+            <td class="py-3 px-5 font-semibold ${u.activo ? 'text-slate-800' : 'text-slate-400 line-through'}">${u.nombre_completo}</td>
+            <td class="py-3 px-5 text-slate-500">${u.email}</td>
+            <td class="py-3 px-5"><span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px]">${u.role_label}</span></td>
+            <td class="py-3 px-5 text-center"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${u.activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}">${u.activo ? 'ACTIVO' : 'DESHABILITADO'}</span></td>
+            <td class="py-3 px-5 text-center text-[11px] font-mono-code text-slate-400">${u.tiene_pin ? '🔑 Habilitado Q.F.' : 'Estándar'}</td>
+            <td class="py-3 px-5 text-right">
+                <button onclick="toggleUserActive(${u.id_usuario})" class="px-2.5 py-1.5 rounded-lg border ${u.activo ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'} font-bold text-[11px]">
+                    ${u.activo ? 'Deshabilitar' : 'Habilitar'}
+                </button>
+            </td>
+        </tr>`).join('');
+
+    return `
+    <div class="space-y-6">
+        <div>
+            <h1 class="text-xl font-bold text-slate-900">Gestión de Usuarios y Registro de Actividad</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Administración de cuentas del personal de la farmacia, asignación de cargos y bitácora del sistema.</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/40">
+                            <th class="py-3 px-5">ID</th>
+                            <th class="py-3 px-5">RUN</th>
+                            <th class="py-3 px-5">Nombre Completo</th>
+                            <th class="py-3 px-5">Correo Electrónico</th>
+                            <th class="py-3 px-5">Cargo / Perfil</th>
+                            <th class="py-3 px-5 text-center">Estado</th>
+                            <th class="py-3 px-5 text-center">Firma ISP</th>
+                            <th class="py-3 px-5 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-xs">${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+function toggleUserActive(idU) {
+    const u = DB.users.find(x => x.id_usuario === idU);
+    if (!u) return;
+    u.activo = !u.activo;
+    showToast(`Usuario ${u.nombre_completo} ${u.activo ? 'habilitado' : 'deshabilitado'}.`);
+    render();
+}
+
+setInterval(() => {
+    const el = document.getElementById('live-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString('es-CL');
+}, 1000);
+document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('es-CL');
+render();
+</script>
+</body>
+</html>
