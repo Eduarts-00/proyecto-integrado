@@ -48,6 +48,7 @@ systemctl start mariadb
 
 mysql -u root <<EOF
 CREATE DATABASE IF NOT EXISTS farmanet_pro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER DATABASE farmanet_pro CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS 'farmanet'@'127.0.0.1' IDENTIFIED BY 'farmanet123';
 CREATE USER IF NOT EXISTS 'farmanet'@'localhost' IDENTIFIED BY 'farmanet123';
 GRANT ALL PRIVILEGES ON farmanet_pro.* TO 'farmanet'@'127.0.0.1';
