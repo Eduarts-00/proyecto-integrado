@@ -6,6 +6,9 @@ echo "  Instalador Automático FarmaNet Pro — AWS Academy (EC2)    "
 echo "============================================================"
 
 export DEBIAN_FRONTEND=noninteractive
+export HOME=/root
+export COMPOSER_HOME=/root/.composer
+export COMPOSER_ALLOW_SUPERUSER=1
 
 # 1. Detectar sistema operativo (Ubuntu / Debian o Amazon Linux 2023)
 if command -v apt-get >/dev/null 2>&1; then
@@ -76,6 +79,7 @@ cp .env.example .env
 sed -i "s|^APP_NAME=.*|APP_NAME=\"FarmaNet Pro\"|g" .env
 sed -i "s|^APP_ENV=.*|APP_ENV=production|g" .env
 sed -i "s|^APP_DEBUG=.*|APP_DEBUG=false|g" .env
+sed -i "s|^APP_TIMEZONE=.*|APP_TIMEZONE=America/Santiago|g" .env
 sed -i "s|^APP_URL=.*|APP_URL=http://${PUBLIC_IP}|g" .env
 sed -i "s|^DB_CONNECTION=.*|DB_CONNECTION=mysql|g" .env
 sed -i "s|^#* *DB_HOST=.*|DB_HOST=127.0.0.1|g" .env
@@ -83,6 +87,8 @@ sed -i "s|^#* *DB_PORT=.*|DB_PORT=3306|g" .env
 sed -i "s|^#* *DB_DATABASE=.*|DB_DATABASE=farmanet_pro|g" .env
 sed -i "s|^#* *DB_USERNAME=.*|DB_USERNAME=farmanet|g" .env
 sed -i "s|^#* *DB_PASSWORD=.*|DB_PASSWORD=farmanet123|g" .env
+sed -i "s|^SESSION_DRIVER=.*|SESSION_DRIVER=file|g" .env
+sed -i "s|^CACHE_STORE=.*|CACHE_STORE=file|g" .env
 
 export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --optimize-autoloader --no-interaction
