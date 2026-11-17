@@ -5,226 +5,94 @@
 @section('content')
 @php
     $tieneConvenioActivo = $selectedConvenio && $selectedConvenio->esta_vigente && $selectedConvenio->porcentaje_descuento > 0;
+    $totalUnidadesCarro = collect($cartDetailed)->sum('cantidad');
 @endphp
-<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
 
-    <!-- Columna Principal POS (Buscador + Carro + Catálogo) -->
-    <div class="xl:col-span-8 space-y-5">
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
 
-        <!-- Barra de Búsqueda Predictiva y Escáner de Código de Barras -->
-        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                <form action="{{ route('pos.index') }}" method="GET" class="md:col-span-7 flex gap-2">
-                    <div class="relative flex-1">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">🔍</span>
-                        <input type="text" name="q" value="{{ $search }}"
-                               placeholder="Buscar medicamento por nombre o código..."
-                               class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] outline-none">
-                    </div>
-                    <button type="submit" class="px-3.5 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold">
-                        Buscar
-                    </button>
-                    @if($search !== '')
-                        <a href="{{ route('pos.index') }}" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-500 text-xs">Limpiar</a>
-                    @endif
-                </form>
+    <!-- ========================================================================= -->
+    <!-- COLUMNA IZQUIERDA (7 cols): BUSCADOR PREDICTIVO + CATÁLOGO DE PRODUCTOS   -->
+    <!-- ========================================================================= -->
+    <div class="xl:col-span-7 space-y-4">
 
-                <form action="{{ route('pos.add') }}" method="POST" class="md:col-span-5 flex gap-2">
-                    @csrf
-                    <div class="relative flex-1">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">🏷️</span>
-                        <input type="text" name="codigo_barras" required
-                               placeholder="Escanear código de barras..."
-                               class="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] font-mono-code outline-none">
-                    </div>
-                    <button type="submit" class="px-3.5 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-semibold">
-                        Escanear
-                    </button>
-                </form>
-            </div>
-        </div>
+        <!-- Barra Superior: Buscador con Autocompletado en Vivo + Escáner EAN -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
 
-        <!-- Alerta de Bloqueo Sanitario ISP cuando hay medicamentos controlados en el carro -->
-        @if($hasControlledItems && !$allControlledAuthorized)
-            <div class="p-4 rounded-xl bg-red-50 border-2 border-[#EF4444] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
-                <div class="flex items-start gap-3">
-                    <span class="w-8 h-8 rounded-lg bg-[#EF4444] text-white flex items-center justify-center font-bold shrink-0">🔒</span>
-                    <div>
-                        <h3 class="text-xs font-extrabold uppercase tracking-wide text-red-900">
-                            Venta Restringida — Requiere Receta Retenida
-                        </h3>
-                        <p class="text-xs text-red-700 mt-0.5">
-                            El carro contiene medicamentos controlados. El cobro permanece bloqueado hasta contar con la autorización del Químico Farmacéutico.
-                        </p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" onclick="document.getElementById('modal-qf-pin').classList.remove('hidden')"
-                            class="px-3.5 py-2 rounded-lg bg-[#EF4444] hover:bg-red-700 text-white text-xs font-bold shadow-sm transition">
-                        🔑 Autorizar en Caja
-                    </button>
-                    <button type="button" onclick="document.getElementById('modal-cola-isp').classList.remove('hidden')"
-                            class="px-3 py-2 rounded-lg bg-white border border-red-300 hover:bg-red-100 text-red-800 text-xs font-semibold transition">
-                        📤 Enviar a Bandeja Q.F.
-                    </button>
-                </div>
-            </div>
-        @endif
-
-        <!-- Tabla Dinámica de Carro de Compras -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            @if(empty($cartDetailed))
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/50">
-                                <th class="py-3 px-4">Medicamento / Cobertura Convenio</th>
-                                <th class="py-3 px-4">Lote Vitrina</th>
-                                <th class="py-3 px-4 text-center">Cant.</th>
-                                <th class="py-3 px-4 text-right">P. Unitario</th>
-                                <th class="py-3 px-4 text-right">Bonificación</th>
-                                <th class="py-3 px-4 text-right">Copago Línea</th>
-                                <th class="py-3 px-4 text-center">Estado ISP</th>
-                            </tr>
-                        </thead>
-                    </table>
-                </div>
-                <div class="py-16 px-6 text-center">
-                    <div class="text-3xl mb-2 text-slate-300">🛒</div>
-                    <p class="text-xs font-medium text-slate-400">
-                        El carro está vacío. Busca o escanea un medicamento.
-                    </p>
-                </div>
-            @else
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/50">
-                                <th class="py-3 px-4">Medicamento / Cobertura Convenio</th>
-                                <th class="py-3 px-4">Lote Vitrina</th>
-                                <th class="py-3 px-4 text-center">Cant.</th>
-                                <th class="py-3 px-4 text-right">P. Unitario</th>
-                                <th class="py-3 px-4 text-right">Bonificación</th>
-                                <th class="py-3 px-4 text-right">Copago Línea</th>
-                                <th class="py-3 px-4 text-center">Estado ISP</th>
-                                <th class="py-3 px-4 text-right">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 text-xs">
-                            @foreach($cartDetailed as $item)
-                                @php
-                                    /** @var \App\Models\Medication $med */
-                                    $med = $item['medicamento'];
-                                    /** @var \App\Models\Batch|null $lote */
-                                    $lote = $item['lote_fefo'];
-                                    $cubierto = $item['cubierto_convenio'] ?? false;
-                                    $pctLinea = $item['porcentaje_convenio'] ?? 0;
-                                    $dctoLinea = $item['descuento_linea'] ?? 0;
-                                    $copagoLinea = $item['total_copago_linea'] ?? $item['subtotal'];
-                                @endphp
-                                <tr class="hover:bg-slate-50/80">
-                                    <td class="py-3 px-4">
-                                        <div class="font-semibold text-slate-900">{{ $med->nombre_comercial }}</div>
-                                        <div class="text-[11px] text-slate-400 font-mono-code">{{ $med->codigo_barras }} • {{ $med->laboratorio }}</div>
-                                        @if($tieneConvenioActivo)
-                                            <div class="mt-1">
-                                                @if($cubierto)
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                                                        ✓ Cubierto por {{ $selectedConvenio->nombre_convenio }} (-{{ number_format($pctLinea, 0) }}%)
-                                                    </span>
-                                                @else
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-semibold">
-                                                        ✕ Fuera de vademécum {{ $selectedConvenio->nombre_convenio }} (Precio normal)
-                                                    </span>
-                                                @endif
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 px-4">
-                                        @if($lote)
-                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 font-mono-code text-[11px]">
-                                                {{ $lote->lote_codigo }}
-                                            </span>
-                                        @else
-                                            <span class="text-red-500 font-semibold text-[11px]">Sin lote vitrina</span>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 px-4 text-center font-bold text-slate-800">
-                                        {{ $item['cantidad'] }}
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-mono-code text-slate-600">
-                                        ${{ number_format($item['precio_unitario'], 0, ',', '.') }}
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-mono-code">
-                                        @if($dctoLinea > 0)
-                                            <span class="text-emerald-600 font-bold">-${{ number_format($dctoLinea, 0, ',', '.') }}</span>
-                                        @else
-                                            <span class="text-slate-400">$0</span>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 px-4 text-right font-mono-code">
-                                        @if($dctoLinea > 0)
-                                            <div class="text-[10px] text-slate-400 line-through">${{ number_format($item['subtotal'], 0, ',', '.') }}</div>
-                                        @endif
-                                        <div class="font-bold text-slate-900">${{ number_format($copagoLinea, 0, ',', '.') }}</div>
-                                    </td>
-                                    <td class="py-3 px-4 text-center">
-                                        @if($item['es_controlado'])
-                                            @if($item['autorizacion_isp'])
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                    ✓ Autorizado ({{ $item['autorizacion_isp']->folio_receta }})
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-[#EF4444] border border-red-300">
-                                                    ▲ Requiere Receta
-                                                </span>
-                                            @endif
-                                        @else
-                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                ✓ Venta Libre
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="py-3 px-4 text-right">
-                                        <form action="{{ route('pos.remove', $med->id_medicamento) }}" method="POST">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-500 hover:text-red-700 font-semibold text-xs">
-                                                Quitar
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-        </div>
-
-        <!-- Catálogo de Medicamentos Disponibles -->
-        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
-                <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Catálogo de Medicamentos Disponibles ({{ $medicamentos->count() }} productos)
-                    </h3>
-                    <span class="text-[11px] text-slate-400">
-                        @if($tieneConvenioActivo)
-                            Mostrando cobertura de vademécum para <strong>{{ $selectedConvenio->nombre_convenio }}</strong>
-                        @else
-                            Selecciona un producto o filtra por categoría terapéutica
+                <!-- Buscador Predictivo con Sugerencias Instantáneas -->
+                <div class="lg:col-span-7 relative" id="search-autocomplete-wrapper">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                        Buscador de Medicamentos (Sugerencias en vivo)
+                    </label>
+                    <form action="{{ route('pos.index') }}" method="GET" class="flex gap-1.5" autocomplete="off">
+                        @if(($categoriaFiltro ?? '') !== '')
+                            <input type="hidden" name="categoria" value="{{ $categoriaFiltro }}">
                         @endif
-                    </span>
+                        @if($soloConvenio ?? false)
+                            <input type="hidden" name="solo_convenio" value="1">
+                        @endif
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs pointer-events-none">🔍</span>
+                            <input type="text"
+                                   id="pos-search-input"
+                                   name="q"
+                                   value="{{ $search }}"
+                                    autocomplete="off"
+                                   placeholder="Escribe las primeras letras (ej: Paracetamol, Losartán, Amox...)"
+                                   class="w-full pl-9 pr-8 py-2.5 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none font-medium text-slate-800">
+                            <button type="button"
+                                    id="btn-clear-search"
+                                    onclick="clearLiveSearch()"
+                                    class="{{ $search === '' ? 'hidden' : '' }} absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold"
+                                    title="Limpiar búsqueda">
+                                ✕
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Desplegable de Sugerencias de Autocompletado -->
+                    <div id="autocomplete-dropdown"
+                         class="hidden absolute left-0 right-0 top-full mt-1.5 z-40 bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden">
+                        <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[11px]">
+                            <span id="autocomplete-header-text" class="font-bold text-slate-600">Sugerencias encontradas</span>
+                            <span class="text-slate-400">Elige cantidad y presiona + Agregar</span>
+                        </div>
+                        <div id="autocomplete-results" class="max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
+                    </div>
                 </div>
 
-                <form action="{{ route('pos.index') }}" method="GET" class="flex flex-wrap items-center gap-2 text-xs">
+                <!-- Lector de Código de Barras con Cantidad -->
+                <div class="lg:col-span-5">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                        Lector Código de Barras (EAN)
+                    </label>
+                    <form action="{{ route('pos.add') }}" method="POST" class="flex gap-1.5">
+                        @csrf
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 text-xs pointer-events-none">🏷️</span>
+                            <input type="text" name="codigo_barras" required
+                                   placeholder="Código EAN..."
+                                   class="w-full pl-8 pr-2 py-2.5 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] font-mono-code outline-none">
+                        </div>
+                        <input type="number" name="cantidad" min="1" max="999" value="1"
+                               title="Cantidad de unidades a escanear"
+                               class="w-14 px-2 py-2.5 text-xs text-center font-mono-code font-bold rounded-lg border border-slate-300 focus:border-[#1E40AF] outline-none">
+                        <button type="submit" class="px-3 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition">
+                            + EAN
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Filtros Rápidos por Categoría Terapéutica y Cobertura de Convenio -->
+            <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                <form action="{{ route('pos.index') }}" method="GET" class="flex flex-wrap items-center gap-2 text-xs w-full sm:w-auto">
                     @if($search !== '')
                         <input type="hidden" name="q" value="{{ $search }}">
                     @endif
-                    <select name="categoria" onchange="this.form.submit()"
-                            class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-[11px] font-medium text-slate-700">
-                        <option value="">Todas las categorías ({{ $categoriasDisponibles->count() ?? 0 }})</option>
+                    <select id="pos-category-select" name="categoria" onchange="filterCatalogInPage()"
+                            class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700">
+                        <option value="">📂 Todas las categorías ({{ $categoriasDisponibles->count() ?? 0 }})</option>
                         @foreach($categoriasDisponibles ?? [] as $cat)
                             <option value="{{ $cat }}" {{ ($categoriaFiltro ?? '') === $cat ? 'selected' : '' }}>
                                 {{ $cat }}
@@ -233,120 +101,192 @@
                     </select>
 
                     @if($tieneConvenioActivo)
-                        <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border {{ ($soloConvenio ?? false) ? 'border-blue-300 bg-blue-50 text-[#1E40AF] font-bold' : 'border-slate-300 bg-white text-slate-600' }} text-[11px] cursor-pointer">
-                            <input type="checkbox" name="solo_convenio" value="1" {{ ($soloConvenio ?? false) ? 'checked' : '' }}
-                                   onchange="this.form.submit()" class="rounded border-slate-300 text-[#1E40AF]">
-                            <span>Solo cubiertos por convenio</span>
+                        <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50/70 text-[#1E40AF] font-bold text-xs cursor-pointer select-none">
+                            <input type="checkbox" id="pos-only-covered" name="solo_convenio" value="1"
+                                   {{ ($soloConvenio ?? false) ? 'checked' : '' }}
+                                   onchange="filterCatalogInPage()"
+                                   class="rounded border-blue-300 text-[#1E40AF]">
+                            <span>🏷️ Solo cubiertos por {{ $selectedConvenio->nombre_convenio }}</span>
                         </label>
                     @endif
-
-                    @if(($categoriaFiltro ?? '') !== '' || ($soloConvenio ?? false))
-                        <a href="{{ route('pos.index', $search !== '' ? ['q' => $search] : []) }}"
-                           class="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 text-[11px]">
-                            Ver todos
-                        </a>
-                    @endif
                 </form>
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <span id="catalog-visible-counter" class="text-[11px] font-semibold text-slate-400">
+                    Mostrando {{ $medicamentos->count() }} medicamentos
+                </span>
+            </div>
+        </div>
+
+        <!-- Catálogo de Medicamentos con Selector de Cantidad Directa -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div id="catalog-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 @foreach($medicamentos as $med)
                     @php
                         $stockVitrina = $med->stock_vitrina;
                         $primerLote = $med->lotes->first();
                         $pctCat = $tieneConvenioActivo ? $selectedConvenio->obtenerPorcentajeParaMedicamento($med) : 0.0;
                         $precioConDcto = $pctCat > 0 ? round($med->precio_unitario * (1 - ($pctCat / 100)), 0) : $med->precio_unitario;
+                        $esRestringido = $med->tipo_controlado || $med->requiere_receta;
                     @endphp
-                    <div class="p-3.5 rounded-xl border {{ $med->tipo_controlado ? 'border-red-200 bg-red-50/20' : 'border-slate-200 bg-slate-50/40' }} flex items-center justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-bold text-xs text-slate-900 truncate">{{ $med->nombre_comercial }}</span>
-                                @if($med->tipo_controlado || $med->requiere_receta)
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-red-100 text-[#EF4444] border border-red-200">
-                                        ▲ RECETA RETENIDA
-                                    </span>
-                                @else
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-100 text-emerald-700">
-                                        OTC
-                                    </span>
-                                @endif
+                    <div class="catalog-card p-3.5 rounded-xl border {{ $esRestringido ? 'border-red-200 bg-red-50/15' : 'border-slate-200 bg-slate-50/40 hover:border-blue-300' }} flex flex-col justify-between gap-3 transition"
+                         data-nombre="{{ mb_strtolower($med->nombre_comercial) }}"
+                         data-principio="{{ mb_strtolower($med->principio_activo) }}"
+                         data-lab="{{ mb_strtolower($med->laboratorio) }}"
+                         data-categoria="{{ $med->categoria }}"
+                         data-ean="{{ $med->codigo_barras }}"
+                         data-cubierto="{{ $pctCat > 0 ? '1' : '0' }}">
 
-                                @if($tieneConvenioActivo)
-                                    @if($pctCat > 0)
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-[#1E40AF] border border-blue-200">
-                                            🏷️ -{{ number_format($pctCat, 0) }}% Convenio
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold text-xs text-slate-900">{{ $med->nombre_comercial }}</span>
+                                    @if($esRestringido)
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-700 border border-red-200 whitespace-nowrap">
+                                            🔒 Retenida
                                         </span>
                                     @else
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-200 text-slate-600">
-                                            Sin cobertura
+                                        <span class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-100 text-emerald-700 whitespace-nowrap">
+                                            Venta Libre
                                         </span>
                                     @endif
-                                @endif
+
+                                    @if($tieneConvenioActivo)
+                                        @if($pctCat > 0)
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-[#1E40AF] border border-blue-200 whitespace-nowrap">
+                                                🏷️ -{{ number_format($pctCat, 0) }}%
+                                            </span>
+                                        @else
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-200 text-slate-600 whitespace-nowrap">
+                                                Sin cobertura
+                                            </span>
+                                        @endif
+                                    @endif
+                                </div>
+
+                                <div class="text-[11px] text-slate-500 mt-0.5 truncate">
+                                    {{ $med->principio_activo }} • <strong>{{ $med->laboratorio }}</strong>
+                                </div>
+                                <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-2">
+                                    <span class="font-mono-code">{{ $med->codigo_barras }}</span>
+                                    <span>•</span>
+                                    <span>{{ $med->categoria }}</span>
+                                </div>
                             </div>
-                            <div class="text-[11px] text-slate-500 mt-0.5 truncate">
-                                {{ $med->principio_activo }} • <strong>{{ $med->laboratorio }}</strong> • <span class="text-slate-400">{{ $med->categoria }}</span>
-                            </div>
-                            <div class="text-[10px] font-mono-code text-slate-400">
-                                EAN: {{ $med->codigo_barras }}
-                            </div>
-                            <div class="text-[11px] mt-1 flex items-center gap-2">
-                                @if($stockVitrina > 0 && $primerLote)
-                                    <span class="text-emerald-700 font-semibold">Vitrina: {{ $stockVitrina }} u.</span>
-                                    <span class="text-slate-400">|</span>
-                                    <span class="font-mono-code text-[10px] text-blue-700">Lote: {{ $primerLote->lote_codigo }}</span>
+
+                            <!-- Precio -->
+                            <div class="text-right shrink-0">
+                                @if($pctCat > 0)
+                                    <div class="text-[10px] font-mono-code text-slate-400 line-through">
+                                        ${{ number_format($med->precio_unitario, 0, ',', '.') }}
+                                    </div>
+                                    <div class="font-mono-code font-extrabold text-sm text-emerald-700">
+                                        ${{ number_format($precioConDcto, 0, ',', '.') }}
+                                    </div>
                                 @else
-                                    <span class="text-red-600 font-bold">⚠️ Sin stock en Vitrina (Bodega: {{ $med->stock_bodega }} u.)</span>
+                                    <div class="font-mono-code font-extrabold text-sm text-slate-900">
+                                        ${{ number_format($med->precio_unitario, 0, ',', '.') }}
+                                    </div>
                                 @endif
                             </div>
                         </div>
 
-                        <div class="text-right shrink-0">
-                            @if($pctCat > 0)
-                                <div class="text-[10px] font-mono-code text-slate-400 line-through">
-                                    ${{ number_format($med->precio_unitario, 0, ',', '.') }}
-                                </div>
-                                <div class="font-mono-code font-bold text-sm text-emerald-700 mb-1.5">
-                                    ${{ number_format($precioConDcto, 0, ',', '.') }}
-                                </div>
-                            @else
-                                <div class="font-mono-code font-bold text-sm text-slate-900 mb-1.5">
-                                    ${{ number_format($med->precio_unitario, 0, ',', '.') }}
-                                </div>
-                            @endif
+                        <!-- Pie de Tarjeta: Stock Vitrina + Selector de Cantidad + Botón Agregar -->
+                        <div class="pt-2.5 border-t border-slate-200/70 flex items-center justify-between gap-2">
+                            <div class="text-[11px]">
+                                @if($stockVitrina > 0 && $primerLote)
+                                    <span class="text-emerald-700 font-bold">Vitrina: {{ $stockVitrina }} u.</span>
+                                    <span class="text-slate-300 mx-1">|</span>
+                                    <span class="font-mono-code text-[10px] text-slate-500">{{ $primerLote->lote_codigo }}</span>
+                                @else
+                                    <span class="text-red-600 font-bold text-[10px]">⚠️ Sin stock vitrina (Bod: {{ $med->stock_bodega }})</span>
+                                @endif
+                            </div>
 
                             @if($stockVitrina > 0)
-                                <form action="{{ route('pos.add') }}" method="POST">
+                                <form action="{{ route('pos.add') }}" method="POST" class="flex items-center gap-1.5 shrink-0">
                                     @csrf
                                     <input type="hidden" name="id_medicamento" value="{{ $med->id_medicamento }}">
-                                    <input type="hidden" name="cantidad" value="1">
+
+                                    <!-- Selector de cantidad [- 1 +] -->
+                                    <div class="inline-flex items-center rounded-lg border border-slate-300 bg-white overflow-hidden">
+                                        <button type="button"
+                                                onclick="stepInputQty(this, -1, {{ $stockVitrina }})"
+                                                class="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold text-xs leading-none">
+                                            &minus;
+                                        </button>
+                                        <input type="number"
+                                               name="cantidad"
+                                               value="1"
+                                               min="1"
+                                               max="{{ $stockVitrina }}"
+                                               class="w-10 text-center text-xs font-mono-code font-bold text-slate-900 py-1 border-x border-slate-200 outline-none">
+                                        <button type="button"
+                                                onclick="stepInputQty(this, 1, {{ $stockVitrina }})"
+                                                class="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold text-xs leading-none">
+                                            +
+                                        </button>
+                                    </div>
+
                                     <button type="submit"
-                                            class="px-3 py-1.5 rounded-lg text-[11px] font-semibold {{ ($med->tipo_controlado || $med->requiere_receta) ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#1E40AF] hover:bg-blue-800 text-white' }} transition">
+                                            class="px-3 py-1.5 rounded-lg text-[11px] font-bold {{ $esRestringido ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#1E40AF] hover:bg-blue-800 text-white' }} shadow-sm transition whitespace-nowrap">
                                         + Agregar
                                     </button>
                                 </form>
                             @else
-                                <span class="px-2.5 py-1 rounded bg-slate-200 text-slate-500 text-[10px] font-semibold">
-                                    Sin Stock
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-500 text-[10px] font-bold">
+                                    Agotado en Vitrina
                                 </span>
                             @endif
                         </div>
                     </div>
                 @endforeach
             </div>
+
+            <div id="catalog-empty-msg" class="hidden py-12 text-center text-slate-400 text-xs">
+                No se encontraron medicamentos con ese criterio.
+            </div>
         </div>
     </div>
 
-    <!-- Columna Derecha: Convenio de Salud y Resumen de Cobro -->
-    <div class="xl:col-span-4 space-y-5">
-        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
-            <div>
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                    Convenio de Salud (Vademécum por Medicamento)
-                </h3>
-                <form action="{{ route('pos.discount') }}" method="POST" class="mb-3">
+    <!-- ========================================================================= -->
+    <!-- COLUMNA DERECHA FIJA (5 cols): TICKET / CARRITO DE COMPRAS + COBRO        -->
+    <!-- ========================================================================= -->
+    <div class="xl:col-span-5 xl:sticky xl:top-16 space-y-4">
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col">
+
+            <!-- Cabecera del Ticket / Carrito -->
+            <div class="bg-[#0F172A] text-white px-5 py-3.5 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-lg bg-[#1E40AF] flex items-center justify-center text-sm font-bold">🛒</span>
+                    <div>
+                        <h2 class="font-bold text-sm leading-tight">Carrito de Dispensación</h2>
+                        <p class="text-[11px] text-slate-400">
+                            {{ count($cartDetailed) }} producto(s) • {{ $totalUnidadesCarro }} unidad(es)
+                        </p>
+                    </div>
+                </div>
+
+                @if(!empty($cartDetailed))
+                    <form action="{{ route('pos.clear') }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                                class="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-200 text-[11px] font-semibold transition">
+                            🗑️ Vaciar
+                        </button>
+                    </form>
+                @endif
+            </div>
+
+            <!-- Selector de Convenio de Salud -->
+            <div class="p-4 bg-slate-50 border-b border-slate-200">
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    🏥 Convenio de Salud / Previsión del Paciente
+                </label>
+                <form action="{{ route('pos.discount') }}" method="POST">
                     @csrf
                     <select name="id_convenio" onchange="this.form.submit()"
-                            class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-800 focus:border-[#1E40AF] outline-none">
+                            class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:border-[#1E40AF] outline-none">
                         @foreach($convenios as $conv)
                             <option value="{{ $conv->id_convenio }}" {{ ($selectedConvenio?->id_convenio == $conv->id_convenio) ? 'selected' : '' }}>
                                 {{ $conv->nombre_convenio }} ({{ number_format($conv->porcentaje_descuento, 0) }}% bonificación)
@@ -354,104 +294,214 @@
                         @endforeach
                     </select>
                 </form>
-
                 @if($tieneConvenioActivo)
-                    <div class="mb-5 p-3 rounded-lg bg-blue-50/70 border border-blue-200 text-[11px] text-slate-700 space-y-1">
-                        <div class="font-bold text-[#1E40AF] flex items-center justify-between">
-                            <span>{{ $selectedConvenio->nombre_convenio }}</span>
-                            <span>{{ number_format($selectedConvenio->porcentaje_descuento, 0) }}% dcto.</span>
-                        </div>
-                        @if($selectedConvenio->aplica_todo_catalogo)
-                            <p class="text-slate-600">🌐 Cobertura general sobre todo el catálogo farmacéutico.</p>
-                        @else
-                            <p class="text-slate-600">
-                                💊 <strong>Vademécum activo ({{ $selectedConvenio->medicamentos->count() }} medicamentos adheridos):</strong>
-                                el descuento se aplica exclusivamente a los fármacos incluidos en el petitorio del convenio.
-                            </p>
-                        @endif
+                    <div class="mt-2 flex items-center justify-between text-[11px] text-[#1E40AF] bg-blue-50/80 border border-blue-200 rounded-lg px-2.5 py-1.5">
+                        <span class="font-semibold">
+                            @if($selectedConvenio->aplica_todo_catalogo)
+                                🌐 Descuento aplica a todo el catálogo
+                            @else
+                                💊 Cubre {{ $selectedConvenio->medicamentos->count() }} medicamentos adheridos
+                            @endif
+                        </span>
+                        <span class="font-extrabold">-{{ number_format($selectedConvenio->porcentaje_descuento, 0) }}%</span>
                     </div>
                 @endif
+            </div>
 
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
-                    Resumen de Cobro y Copago
-                </h3>
-                <div class="space-y-2.5 text-xs border-b border-slate-200 pb-4">
+            <!-- Alerta de Bloqueo Sanitario ISP si hay Receta Retenida en el carrito -->
+            @if($hasControlledItems && !$allControlledAuthorized)
+                <div class="mx-4 mt-3 p-3 rounded-xl bg-red-50 border-2 border-[#EF4444] space-y-2">
+                    <div class="flex items-start gap-2.5">
+                        <span class="w-6 h-6 rounded-md bg-[#EF4444] text-white flex items-center justify-center text-xs font-bold shrink-0">🔒</span>
+                        <div>
+                            <h3 class="text-[11px] font-extrabold uppercase text-red-900">
+                                Venta Restringida — Requiere Receta Retenida
+                            </h3>
+                            <p class="text-[11px] text-red-700 leading-snug">
+                                El carrito incluye medicamentos controlados. Autorice con PIN del Químico Farmacéutico para habilitar el cobro.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <button type="button" onclick="document.getElementById('modal-qf-pin').classList.remove('hidden')"
+                                class="flex-1 py-1.5 px-3 rounded-lg bg-[#EF4444] hover:bg-red-700 text-white text-[11px] font-bold shadow-sm transition">
+                            🔑 Autorizar en Caja (PIN Q.F.)
+                        </button>
+                        <button type="button" onclick="document.getElementById('modal-cola-isp').classList.remove('hidden')"
+                                class="py-1.5 px-2.5 rounded-lg bg-white border border-red-300 hover:bg-red-100 text-red-800 text-[11px] font-semibold transition">
+                            📤 Enviar a Q.F.
+                        </button>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Lista de Ítems del Carrito (con edición directa de cantidad) -->
+            <div class="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
+                @forelse($cartDetailed as $item)
+                    @php
+                        /** @var \App\Models\Medication $med */
+                        $med = $item['medicamento'];
+                        /** @var \App\Models\Batch|null $lote */
+                        $lote = $item['lote_fefo'];
+                        $cubierto = $item['cubierto_convenio'] ?? false;
+                        $pctLinea = $item['porcentaje_convenio'] ?? 0;
+                        $dctoLinea = $item['descuento_linea'] ?? 0;
+                        $copagoLinea = $item['total_copago_linea'] ?? $item['subtotal'];
+                        $maxStockItem = max($item['cantidad'], $med->stock_vitrina);
+                    @endphp
+                    <div class="p-3.5 hover:bg-slate-50/80 transition space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="font-bold text-xs text-slate-900 flex items-center gap-1.5 flex-wrap">
+                                    <span>{{ $med->nombre_comercial }}</span>
+                                    @if($item['es_controlado'])
+                                        @if($item['autorizacion_isp'])
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                                                ✓ Visado ({{ $item['autorizacion_isp']->folio_receta }})
+                                            </span>
+                                        @else
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-[#EF4444]">
+                                                🔒 Receta Retenida
+                                            </span>
+                                        @endif
+                                    @endif
+                                </div>
+                                <div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                    <span>{{ $med->laboratorio }}</span>
+                                    @if($lote)
+                                        <span>•</span>
+                                        <span class="font-mono-code text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                                            {{ $lote->lote_codigo }}
+                                        </span>
+                                    @endif
+                                </div>
+                                @if($tieneConvenioActivo)
+                                    <div class="mt-1">
+                                        @if($cubierto)
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                                                ✓ -{{ number_format($pctLinea, 0) }}% {{ $selectedConvenio->nombre_convenio }} (Ahorra ${{ number_format($dctoLinea, 0, ',', '.') }})
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px]">
+                                                Sin cobertura en {{ $selectedConvenio->nombre_convenio }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+
+                            <!-- Botón eliminar ítem -->
+                            <form action="{{ route('pos.remove', $med->id_medicamento) }}" method="POST">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        title="Quitar del carrito"
+                                        class="text-slate-400 hover:text-red-600 text-xs font-bold p-1">
+                                    ✕
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Control de Cantidad en vivo + Subtotal Línea -->
+                        <div class="flex items-center justify-between pt-1">
+                            <form action="{{ route('pos.update_qty', $med->id_medicamento) }}" method="POST" class="flex items-center gap-1.5">
+                                @csrf
+                                @method('PATCH')
+                                <span class="text-[11px] text-slate-500">Cant.:</span>
+                                <div class="inline-flex items-center rounded-lg border border-slate-300 bg-white overflow-hidden">
+                                    <button type="button"
+                                            onclick="changeCartItemQty(this, -1, {{ $maxStockItem }})"
+                                            class="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold text-xs leading-none">
+                                        &minus;
+                                    </button>
+                                    <input type="number"
+                                           name="cantidad"
+                                           value="{{ $item['cantidad'] }}"
+                                           min="1"
+                                           max="{{ $maxStockItem }}"
+                                           onchange="this.form.submit()"
+                                           class="w-11 text-center text-xs font-mono-code font-bold text-slate-900 py-1 border-x border-slate-200 outline-none">
+                                    <button type="button"
+                                            onclick="changeCartItemQty(this, 1, {{ $maxStockItem }})"
+                                            class="px-2 py-1 text-slate-600 hover:bg-slate-100 font-bold text-xs leading-none">
+                                        +
+                                    </button>
+                                </div>
+                                <span class="text-[10px] text-slate-400 font-mono-code">
+                                    x ${{ number_format($item['precio_unitario'], 0, ',', '.') }}
+                                </span>
+                            </form>
+
+                            <div class="text-right font-mono-code">
+                                @if($dctoLinea > 0)
+                                    <span class="text-[10px] text-slate-400 line-through mr-1">
+                                        ${{ number_format($item['subtotal'], 0, ',', '.') }}
+                                    </span>
+                                @endif
+                                <span class="font-extrabold text-xs text-slate-900">
+                                    ${{ number_format($copagoLinea, 0, ',', '.') }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="py-12 px-6 text-center">
+                        <div class="text-3xl mb-2 text-slate-300">🛒</div>
+                        <p class="text-xs font-bold text-slate-500">El carrito de compras está vacío</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">
+                            Usa el buscador predictivo o selecciona la cantidad en el catálogo izquierdo.
+                        </p>
+                    </div>
+                @endforelse
+            </div>
+
+            <!-- Desglose de Cobro y Botón de Pago -->
+            <div class="p-5 bg-slate-50 border-t border-slate-200 space-y-3">
+                <div class="space-y-1.5 text-xs border-b border-slate-200 pb-3">
                     <div class="flex justify-between text-slate-600">
-                        <span>Subtotal Bruto ({{ count($cartDetailed) }} ítems)</span>
+                        <span>Subtotal Bruto ({{ $totalUnidadesCarro }} u.)</span>
                         <span class="font-mono-code font-semibold">${{ number_format($liquidacion['subtotal'], 0, ',', '.') }}</span>
                     </div>
 
-                    @if($tieneConvenioActivo && !empty($cartDetailed))
-                        <div class="flex justify-between text-slate-500 text-[11px]">
-                            <span>• Productos afectos a convenio ({{ $liquidacion['items_cubiertos_count'] ?? 0 }})</span>
-                            <span class="font-mono-code">${{ number_format($liquidacion['monto_afecto_convenio'] ?? 0, 0, ',', '.') }}</span>
-                        </div>
-                        @if(($liquidacion['monto_no_cubierto'] ?? 0) > 0)
-                            <div class="flex justify-between text-amber-700 text-[11px]">
-                                <span>• Productos fuera de vademécum ({{ $liquidacion['items_no_cubiertos_count'] ?? 0 }})</span>
-                                <span class="font-mono-code">${{ number_format($liquidacion['monto_no_cubierto'] ?? 0, 0, ',', '.') }}</span>
-                            </div>
-                        @endif
-                    @endif
-
                     @if($liquidacion['descuento_total'] > 0)
-                        <div class="flex justify-between text-emerald-600 font-semibold">
-                            <span>Bonificación ({{ $selectedConvenio?->nombre_convenio }})</span>
+                        <div class="flex justify-between text-emerald-700 font-bold">
+                            <span>Bonificación {{ $selectedConvenio?->nombre_convenio }}</span>
                             <span class="font-mono-code">-${{ number_format($liquidacion['descuento_total'], 0, ',', '.') }}</span>
-                        </div>
-                    @elseif($tieneConvenioActivo && !empty($cartDetailed))
-                        <div class="flex justify-between text-amber-700 font-medium text-[11px]">
-                            <span>Bonificación ({{ $selectedConvenio?->nombre_convenio }})</span>
-                            <span class="font-mono-code">$0 (Ningún ítem en vademécum)</span>
                         </div>
                     @endif
 
                     <div class="flex justify-between text-slate-400 text-[11px]">
-                        <span>IVA 19% (incluido)</span>
+                        <span>IVA Débito Fiscal (19% incluido)</span>
                         <span class="font-mono-code">${{ number_format($liquidacion['iva'], 0, ',', '.') }}</span>
                     </div>
                 </div>
 
-                <div class="py-4 flex items-center justify-between">
+                <div class="flex items-center justify-between py-1">
                     <span class="text-sm font-extrabold text-slate-900">TOTAL A PAGAR</span>
                     <span class="text-2xl font-extrabold font-mono-code text-[#1E40AF]">
                         ${{ number_format($liquidacion['total'], 0, ',', '.') }}
                     </span>
                 </div>
-            </div>
 
-            <!-- Botones de Acción de Caja -->
-            <div class="mt-4 space-y-2.5">
                 @if(empty($cartDetailed))
                     <button type="button" disabled
                             class="w-full py-3 px-4 rounded-xl bg-slate-200 text-slate-400 font-bold text-xs cursor-not-allowed">
                         💳 Procesar Pago y Emitir Boleta
                     </button>
                 @elseif($hasControlledItems && !$allControlledAuthorized)
-                    <button type="button" disabled
-                            class="w-full py-3 px-4 rounded-xl bg-red-100 border border-red-300 text-[#EF4444] font-bold text-xs cursor-not-allowed">
-                        🔒 Cobro Bloqueado — Requiere Autorización Q.F.
-                    </button>
                     <button type="button" onclick="document.getElementById('modal-qf-pin').classList.remove('hidden')"
-                            class="w-full py-2.5 px-4 rounded-xl bg-[#EF4444] hover:bg-red-700 text-white font-bold text-xs shadow-sm transition">
-                        🛡️ Autorizar Receta con PIN Q.F.
+                            class="w-full py-3 px-4 rounded-xl bg-[#EF4444] hover:bg-red-700 text-white font-bold text-xs shadow-sm transition">
+                        🛡️ Autorizar Receta con PIN Q.F. y Cobrar
                     </button>
                 @else
                     <form action="{{ route('pos.checkout') }}" method="POST">
                         @csrf
                         <button type="submit"
-                                class="w-full py-3 px-4 rounded-xl bg-[#1E40AF] hover:bg-blue-800 text-white font-bold text-xs shadow-md transition">
+                                class="w-full py-3 px-4 rounded-xl bg-[#10B981] hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition">
                             💳 Procesar Pago y Emitir Boleta
                         </button>
                     </form>
                 @endif
-
-                <form action="{{ route('pos.clear') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="w-full py-2 text-center text-xs text-slate-400 hover:text-slate-600 font-medium">
-                        Vaciar carro
-                    </button>
-                </form>
             </div>
         </div>
 
@@ -589,4 +639,213 @@
         </form>
     </div>
 </div>
+
+<script>
+    const POS_CATALOG = @json($catalogoAutocompletado ?? []);
+    const POS_ADD_URL = "{{ route('pos.add') }}";
+    const CSRF_TOKEN = "{{ csrf_token() }}";
+
+    // Incrementar/disminuir cantidad en las tarjetas del catálogo
+    function stepInputQty(btn, delta, maxStock) {
+        const input = btn.parentElement.querySelector('input[name="cantidad"]');
+        if (!input) return;
+        let next = parseInt(input.value || '1', 10) + delta;
+        if (next < 1) next = 1;
+        if (next > maxStock) next = maxStock;
+        input.value = next;
+    }
+
+    // Cambiar cantidad directamente en un ítem del carrito y enviar actualización
+    function changeCartItemQty(btn, delta, maxStock) {
+        const form = btn.closest('form');
+        const input = form.querySelector('input[name="cantidad"]');
+        if (!input) return;
+        let next = parseInt(input.value || '1', 10) + delta;
+        if (next < 1) next = 1;
+        if (next > maxStock) next = maxStock;
+        input.value = next;
+        form.submit();
+    }
+
+    // Normalizar texto sin tildes para búsqueda predictiva
+    function normStr(str) {
+        return String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function fmtClpJs(n) {
+        return '$' + Math.round(Number(n || 0)).toLocaleString('es-CL');
+    }
+
+    // Filtrar tarjetas del catálogo en la página y mostrar sugerencias que empiezan con esas letras
+    function filterCatalogInPage() {
+        const searchInput = document.getElementById('pos-search-input');
+        const clearBtn = document.getElementById('btn-clear-search');
+        const catSelect = document.getElementById('pos-category-select');
+        const onlyCovCheck = document.getElementById('pos-only-covered');
+        const rawQuery = (searchInput ? searchInput.value : '').trim();
+        const q = normStr(rawQuery);
+        const cat = catSelect ? catSelect.value : '';
+        const onlyCovered = onlyCovCheck ? onlyCovCheck.checked : false;
+
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', rawQuery === '');
+        }
+
+        let visibleCount = 0;
+        document.querySelectorAll('.catalog-card').forEach(card => {
+            const nombre = normStr(card.getAttribute('data-nombre'));
+            const principio = normStr(card.getAttribute('data-principio'));
+            const lab = normStr(card.getAttribute('data-lab'));
+            const ean = normStr(card.getAttribute('data-ean'));
+            const cardCat = card.getAttribute('data-categoria') || '';
+            const cardCubierto = card.getAttribute('data-cubierto') === '1';
+
+            const matchQ = !q || nombre.startsWith(q) || principio.startsWith(q) || nombre.includes(q) || principio.includes(q) || lab.includes(q) || ean.includes(q);
+            const matchCat = !cat || cardCat === cat;
+            const matchCov = !onlyCovered || cardCubierto;
+
+            if (matchQ && matchCat && matchCov) {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        const counterEl = document.getElementById('catalog-visible-counter');
+        if (counterEl) {
+            counterEl.textContent = `Mostrando ${visibleCount} medicamento(s)`;
+        }
+        const emptyEl = document.getElementById('catalog-empty-msg');
+        if (emptyEl) {
+            emptyEl.classList.toggle('hidden', visibleCount > 0);
+        }
+
+        renderAutocompleteSuggestions(rawQuery, q);
+    }
+
+    function renderAutocompleteSuggestions(rawQuery, q) {
+        const dropdown = document.getElementById('autocomplete-dropdown');
+        const resultsBox = document.getElementById('autocomplete-results');
+        const headerText = document.getElementById('autocomplete-header-text');
+        if (!dropdown || !resultsBox) return;
+
+        if (!q || q.length < 1) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        // Prioridad 1: Medicamentos cuyo nombre comercial o principio activo COMIENZA con las letras escritas
+        const startsWithMatches = [];
+        // Prioridad 2: Medicamentos que contienen las letras en cualquier parte o por código EAN
+        const containsMatches = [];
+
+        POS_CATALOG.forEach(item => {
+            const nNombre = normStr(item.nombre_comercial);
+            const nPrincipio = normStr(item.principio_activo);
+            const nEan = normStr(item.codigo_barras);
+
+            if (nNombre.startsWith(q) || nPrincipio.startsWith(q)) {
+                startsWithMatches.push({ ...item, matchType: 'starts' });
+            } else if (nNombre.includes(q) || nPrincipio.includes(q) || nEan.includes(q)) {
+                containsMatches.push({ ...item, matchType: 'contains' });
+            }
+        });
+
+        const combined = [...startsWithMatches, ...containsMatches].slice(0, 8);
+
+        if (combined.length === 0) {
+            headerText.textContent = `Sin coincidencias para "${rawQuery}"`;
+            resultsBox.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">No se encontraron medicamentos con ese nombre o principio activo.</div>`;
+            dropdown.classList.remove('hidden');
+            return;
+        }
+
+        headerText.textContent = startsWithMatches.length > 0
+            ? `Sugerencias que comienzan con "${rawQuery}" (${combined.length})`
+            : `Coincidencias para "${rawQuery}" (${combined.length})`;
+
+        resultsBox.innerHTML = combined.map(m => {
+            const badgeReceta = m.es_controlado
+                ? `<span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-700 border border-red-200">🔒 Retenida</span>`
+                : `<span class="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-100 text-emerald-700">Venta Libre</span>`;
+
+            const badgeConvenio = m.pct_convenio > 0
+                ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-[#1E40AF]">🏷️ -${m.pct_convenio}%</span>`
+                : '';
+
+            const precioHtml = m.pct_convenio > 0
+                ? `<div class="text-[10px] font-mono-code text-slate-400 line-through">${fmtClpJs(m.precio_unitario)}</div>
+                   <div class="font-mono-code font-extrabold text-xs text-emerald-700">${fmtClpJs(m.precio_con_descuento)}</div>`
+                : `<div class="font-mono-code font-extrabold text-xs text-slate-900">${fmtClpJs(m.precio_unitario)}</div>`;
+
+            const actionHtml = m.stock_vitrina > 0
+                ? `<form action="${POS_ADD_URL}" method="POST" class="flex items-center gap-1.5 shrink-0">
+                       <input type="hidden" name="_token" value="${CSRF_TOKEN}">
+                       <input type="hidden" name="id_medicamento" value="${m.id_medicamento}">
+                       <input type="number" name="cantidad" value="1" min="1" max="${m.stock_vitrina}"
+                              title="Cantidad a agregar"
+                              class="w-12 px-1.5 py-1 text-center text-xs font-mono-code font-bold rounded-lg border border-slate-300">
+                       <button type="submit" class="px-2.5 py-1.5 rounded-lg ${m.es_controlado ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1E40AF] hover:bg-blue-800'} text-white font-bold text-[11px] whitespace-nowrap">
+                           + Agregar
+                       </button>
+                   </form>`
+                : `<span class="px-2 py-1 rounded bg-slate-100 text-slate-400 text-[10px] font-bold">Sin stock vitrina</span>`;
+
+            return `
+                <div class="px-3.5 py-2.5 hover:bg-blue-50/50 flex items-center justify-between gap-3 transition">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-bold text-xs text-slate-900">${m.nombre_comercial}</span>
+                            ${badgeReceta}
+                            ${badgeConvenio}
+                        </div>
+                        <div class="text-[11px] text-slate-500 truncate">
+                            ${m.principio_activo} • <strong>${m.laboratorio}</strong> • <span class="text-emerald-700 font-semibold">Vitrina: ${m.stock_vitrina} u.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="text-right">${precioHtml}</div>
+                        ${actionHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        dropdown.classList.remove('hidden');
+    }
+
+    function clearLiveSearch() {
+        const searchInput = document.getElementById('pos-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            filterCatalogInPage();
+            searchInput.focus();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('pos-search-input');
+        const wrapper = document.getElementById('search-autocomplete-wrapper');
+        const dropdown = document.getElementById('autocomplete-dropdown');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterCatalogInPage);
+            searchInput.addEventListener('focus', function() {
+                if (searchInput.value.trim().length > 0) {
+                    filterCatalogInPage();
+                }
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (wrapper && dropdown && !wrapper.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    });
+</script>
 @endsection

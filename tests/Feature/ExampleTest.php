@@ -445,4 +445,30 @@ class ExampleTest extends TestCase
         $authResp = $this->actingAs($admin)->get('/cualquier-cosa-rara/99999');
         $authResp->assertRedirect(route('login'));
     }
+
+    /**
+     * POS: Permite agregar múltiples unidades de una sola vez y editar la cantidad directamente en el carrito.
+     */
+    public function test_pos_permite_agregar_multiples_unidades_y_editar_cantidad_en_carro(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $vendedor = User::where('rut', '12.345.678-5')->firstOrFail();
+        $paracetamol = Medication::where('codigo_barras', '780000100104')->firstOrFail();
+
+        // 1. Agregar 4 unidades de una sola vez
+        $addResp = $this->actingAs($vendedor)->post(route('pos.add'), [
+            'id_medicamento' => $paracetamol->id_medicamento,
+            'cantidad' => 4,
+        ]);
+        $addResp->assertRedirect(route('pos.index'));
+        $this->assertEquals(4, session("pos_cart.{$paracetamol->id_medicamento}.cantidad"));
+
+        // 2. Cambiar directamente la cantidad a 7 unidades desde el carrito
+        $updateResp = $this->actingAs($vendedor)->patch(route('pos.update_qty', $paracetamol->id_medicamento), [
+            'cantidad' => 7,
+        ]);
+        $updateResp->assertRedirect(route('pos.index'));
+        $this->assertEquals(7, session("pos_cart.{$paracetamol->id_medicamento}.cantidad"));
+    }
 }

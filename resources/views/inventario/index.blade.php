@@ -54,28 +54,39 @@
         </div>
     </div>
 
-    <!-- Pestañas de Segregación Física y Catálogo -->
-    <div class="flex flex-wrap items-center gap-2">
-        <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'VITRINA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-            🏪 Vitrina
-        </a>
-        <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BODEGA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-            📦 Bodega
-        </a>
-        <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS']) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'TODOS' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-            📋 Todos los Lotes
-        </a>
-        <a href="{{ route('inventario.index', ['ubicacion' => 'BAJAS']) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BAJAS' ? 'bg-red-50 border-red-300 text-red-800 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-            🗑️ Bajas y Caducados ({{ $bajasCount ?? 0 }})
-        </a>
-        <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO']) }}"
-           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'CATALOGO' ? 'bg-white border-blue-300 text-[#1E40AF] shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-            💊 Catálogo y Recetas ({{ $medicamentosCatalogo->count() }})
-        </a>
+    <!-- Pestañas de Segregación Física, Catálogo y Buscador Rápido -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
+               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'VITRINA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+                🏪 Vitrina
+            </a>
+            <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}"
+               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BODEGA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+                📦 Bodega
+            </a>
+            <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS']) }}"
+               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'TODOS' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+                📋 Todos los Lotes
+            </a>
+            <a href="{{ route('inventario.index', ['ubicacion' => 'BAJAS']) }}"
+               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BAJAS' ? 'bg-red-50 border-red-300 text-red-800 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+                🗑️ Bajas y Caducados ({{ $bajasCount ?? 0 }})
+            </a>
+            <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO']) }}"
+               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'CATALOGO' ? 'bg-white border-blue-300 text-[#1E40AF] shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+                💊 Catálogo y Recetas ({{ $medicamentosCatalogo->count() }})
+            </a>
+        </div>
+
+        <div class="relative w-full lg:w-80">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs pointer-events-none">🔍</span>
+            <input type="text"
+                   id="inv-live-search"
+                   oninput="filterInventoryTable(this.value)"
+                   placeholder="Filtrar por nombre, laboratorio o lote..."
+                   class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white text-xs focus:border-[#1E40AF] outline-none">
+        </div>
     </div>
 
     @if($ubicacion === 'CATALOGO')
@@ -824,4 +835,22 @@
         </div>
     </div>
 @endif
+
+<script>
+    function filterInventoryTable(rawQuery) {
+        const q = String(rawQuery || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+
+        document.querySelectorAll('table tbody tr').forEach(tr => {
+            const txt = String(tr.textContent || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+            tr.style.display = (!q || txt.includes(q)) ? '' : 'none';
+        });
+    }
+</script>
 @endsection

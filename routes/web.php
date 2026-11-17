@@ -26,6 +26,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:vendedor,quimico_farmaceutico,administrador'])->group(function () {
         Route::get('/pos', [SaleController::class, 'index'])->middleware('throttle:60,1')->name('pos.index');
         Route::post('/pos/add', [SaleController::class, 'addItem'])->middleware('throttle:60,1')->name('pos.add');
+        Route::patch('/pos/item/{idMedicamento}', [SaleController::class, 'updateItemQuantity'])->name('pos.update_qty');
         Route::delete('/pos/remove/{idMedicamento}', [SaleController::class, 'removeItem'])->name('pos.remove');
         Route::post('/pos/discount', [SaleController::class, 'applyHealthDiscount'])->name('pos.discount');
         Route::post('/pos/clear', [SaleController::class, 'clearCart'])->name('pos.clear');

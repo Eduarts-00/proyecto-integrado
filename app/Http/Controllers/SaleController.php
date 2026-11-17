@@ -139,8 +139,42 @@ class SaleController extends Controller
 
         $qfUsers = User::whereHas('rol', fn ($q) => $q->where('codigo_rol', 'quimico_farmaceutico'))->get();
 
+        $tieneConvActivo = $selectedConvenio && $selectedConvenio->esta_vigente && $selectedConvenio->porcentaje_descuento > 0;
+        $catalogoAutocompletado = Medication::where('activo', true)
+            ->with(['lotes' => function ($q) {
+                $q->where('activo', true)
+                    ->where('ubicacion', 'VITRINA')
+                    ->where('cantidad', '>', 0)
+                    ->whereDate('fecha_vencimiento', '>', now()->toDateString())
+                    ->orderBy('fecha_vencimiento', 'asc');
+            }])
+            ->orderBy('nombre_comercial')
+            ->get()
+            ->map(function (Medication $m) use ($tieneConvActivo, $selectedConvenio) {
+                $pct = $tieneConvActivo ? $selectedConvenio->obtenerPorcentajeParaMedicamento($m) : 0.0;
+                $precioFinal = $pct > 0 ? round($m->precio_unitario * (1 - ($pct / 100)), 0) : $m->precio_unitario;
+
+                return [
+                    'id_medicamento' => $m->id_medicamento,
+                    'codigo_barras' => $m->codigo_barras,
+                    'nombre_comercial' => $m->nombre_comercial,
+                    'principio_activo' => $m->principio_activo,
+                    'laboratorio' => $m->laboratorio,
+                    'categoria' => $m->categoria ?: 'General',
+                    'precio_unitario' => (int) round($m->precio_unitario),
+                    'precio_con_descuento' => (int) round($precioFinal),
+                    'pct_convenio' => (int) round($pct),
+                    'stock_vitrina' => (int) $m->stock_vitrina,
+                    'stock_bodega' => (int) $m->stock_bodega,
+                    'es_controlado' => (bool) ($m->tipo_controlado || $m->requiere_receta),
+                    'lote_codigo' => $m->lotes->first()?->lote_codigo ?? '',
+                ];
+            })
+            ->values();
+
         return view('pos.index', compact(
             'medicamentos',
+            'catalogoAutocompletado',
             'convenios',
             'cartDetailed',
             'selectedConvenio',
@@ -198,12 +232,46 @@ class SaleController extends Controller
 
         session(['pos_cart' => $cart]);
 
-        $msg = "{$med->nombre_comercial} agregado al carro.";
+        $msg = "{$cantidadAgregar} u. de {$med->nombre_comercial} agregada(s) al carro (Total: {$nuevaCantidad} u.).";
         if ($med->tipo_controlado || $med->requiere_receta) {
             return redirect()->route('pos.index')->with('warning', "ALERTA ISP: {$med->nombre_comercial} es un medicamento controlado. El cobro ha sido bloqueado hasta contar con Autorización del Químico Farmacéutico.");
         }
 
         return redirect()->route('pos.index')->with('success', $msg);
+    }
+
+    public function updateItemQuantity(Request $request, int $idMedicamento)
+    {
+        $data = $request->validate([
+            'cantidad' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $nuevaCantidad = (int) $data['cantidad'];
+        $cart = session('pos_cart', []);
+
+        if ($nuevaCantidad <= 0) {
+            unset($cart[$idMedicamento]);
+            session(['pos_cart' => $cart]);
+
+            return redirect()->route('pos.index')->with('success', 'Medicamento retirado del carro.');
+        }
+
+        $med = Medication::where('activo', true)->find($idMedicamento);
+        if (! $med) {
+            return back()->with('error', 'Medicamento no encontrado.');
+        }
+
+        if ($med->stock_vitrina < $nuevaCantidad) {
+            return back()->with('error', "Stock insuficiente en Vitrina para {$med->nombre_comercial} (Máximo disponible: {$med->stock_vitrina} u.).");
+        }
+
+        $cart[$idMedicamento] = [
+            'id_medicamento' => $idMedicamento,
+            'cantidad' => $nuevaCantidad,
+        ];
+        session(['pos_cart' => $cart]);
+
+        return redirect()->route('pos.index');
     }
 
     public function removeItem(int $idMedicamento)
