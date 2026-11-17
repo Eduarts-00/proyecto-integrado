@@ -89,6 +89,7 @@ sed -i "s|^#* *DB_USERNAME=.*|DB_USERNAME=farmanet|g" .env
 sed -i "s|^#* *DB_PASSWORD=.*|DB_PASSWORD=farmanet123|g" .env
 sed -i "s|^SESSION_DRIVER=.*|SESSION_DRIVER=file|g" .env
 sed -i "s|^CACHE_STORE=.*|CACHE_STORE=file|g" .env
+echo "DB_COLLATION=utf8mb4_unicode_ci" >> .env
 
 export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --optimize-autoloader --no-interaction
