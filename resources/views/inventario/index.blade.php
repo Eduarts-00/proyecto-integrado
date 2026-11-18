@@ -83,11 +83,18 @@
     <!-- Barra de Búsqueda Predictiva y Filtros de Inventario -->
     <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-            <!-- Buscador con Autocompletado en Vivo -->
+            <!-- Buscador con Autocompletado en Vivo + Lector Pistola EAN -->
             <div class="lg:col-span-6 relative" id="inv-search-wrapper">
-                <label for="inv-live-search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                    Buscador de Inventario y Lotes (Sugerencias en vivo)
-                </label>
+                <div class="flex items-center justify-between mb-1">
+                    <label for="inv-live-search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Buscador y Lector Pistola EAN (Sugerencias en vivo)
+                    </label>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold"
+                          title="Puedes pistolear cualquier caja física o presionar F2 para buscar instantáneamente por código EAN-13">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Pistola USB Activa (F2)
+                    </span>
+                </div>
                 <form action="{{ route('inventario.index') }}" method="GET" onsubmit="event.preventDefault(); filterInventoryTable();" autocomplete="off">
                     <input type="hidden" name="ubicacion" value="{{ $ubicacion }}">
                     <div class="relative">
@@ -99,8 +106,8 @@
                                autocomplete="off"
                                oninput="handleInventorySearchInput(this.value)"
                                onfocus="handleInventorySearchInput(this.value)"
-                               placeholder="Escribe medicamento, principio activo, laboratorio o código de lote (ej: Paracetamol, Losartán, LOT-2026)..."
-                               class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none">
+                               placeholder="Pistolea código EAN-13 o escribe medicamento, principio activo, laboratorio o lote..."
+                               class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none transition">
                         <button type="button"
                                 id="btn-clear-inv-search"
                                 onclick="clearInventoryFilters()"
@@ -165,16 +172,33 @@
             </div>
         </div>
 
-        <!-- Barra inferior de estado de búsqueda y contador -->
+        <!-- Barra inferior de estado de búsqueda, simulación de pistoleo y contador -->
         <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div class="flex items-center gap-2 text-slate-500">
+            <div class="flex flex-wrap items-center gap-2 text-slate-500">
                 <span class="inline-flex items-center gap-1 font-medium">
                     Vista activa: <strong class="text-slate-800">{{ $ubicacion }}</strong>
                 </span>
+                <span class="text-slate-300">|</span>
+                <span class="text-[11px] font-bold text-slate-600">⚡ Simular Pistoleo EAN:</span>
+                <button type="button"
+                        onclick="simulateInventoryScan('780000100104')"
+                        class="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 text-[11px] font-semibold transition">
+                    🔫 Paracetamol (780...104)
+                </button>
+                <button type="button"
+                        onclick="simulateInventoryScan('780000100107')"
+                        class="px-2 py-0.5 rounded bg-slate-100 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 text-[11px] font-semibold transition">
+                    🔫 Losartán (780...107)
+                </button>
+                <button type="button"
+                        onclick="simulateInventoryScan('780000100105')"
+                        class="px-2 py-0.5 rounded bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-[11px] font-semibold transition">
+                    🔒 Clonazepam (780...105)
+                </button>
                 <button type="button"
                         id="btn-reset-inv-filters"
                         onclick="clearInventoryFilters()"
-                        class="hidden px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition">
+                        class="hidden px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] transition">
                     ↺ Mostrar todos
                 </button>
             </div>
@@ -221,6 +245,7 @@
                                 data-name="{{ $med->nombre_comercial }}"
                                 data-sub="{{ $med->principio_activo }}"
                                 data-code="{{ $med->codigo_barras }}"
+                                data-ean="{{ $med->codigo_barras }}"
                                 data-lab="{{ $med->laboratorio }}"
                                 data-condicion="{{ $esRestringido ? 'retenida' : 'libre' }}"
                                 data-fefo="{{ $med->activo ? 'activo' : 'inactivo' }}"
@@ -369,6 +394,7 @@
                                 data-name="{{ $lote->medicamento?->nombre_comercial }}"
                                 data-sub="{{ $lote->medicamento?->principio_activo }}"
                                 data-code="{{ $lote->lote_codigo }}"
+                                data-ean="{{ $lote->medicamento?->codigo_barras }}"
                                 data-lab="{{ $lote->medicamento?->laboratorio }}"
                                 data-condicion="{{ $esControlado ? 'retenida' : 'libre' }}"
                                 data-fefo="{{ $fefoKey }}"
@@ -914,6 +940,20 @@
             </div>
             <form action="{{ route('inventario.register') }}" method="POST" class="p-5 space-y-3.5 text-xs">
                 @csrf
+                <div class="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label for="remesa-scan-ean" class="font-bold text-emerald-950 flex items-center gap-1">
+                            <span>🔫</span>
+                            <span>Pistolear Código de Barras de la Caja (EAN-13)</span>
+                        </label>
+                        <span class="text-[10px] font-bold text-emerald-700">Autoselección rápida</span>
+                    </div>
+                    <input type="text"
+                           id="remesa-scan-ean"
+                           oninput="matchRemesaMedicationByEan(this.value)"
+                           placeholder="Pistolea o pega el código EAN (ej: 780000100104)..."
+                           class="w-full px-3 py-1.5 rounded-lg border border-emerald-300 bg-white font-mono-code text-xs outline-none focus:border-emerald-600">
+                </div>
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="block font-bold text-slate-700">Medicamento del Catálogo</label>
@@ -925,10 +965,10 @@
                             </button>
                         @endif
                     </div>
-                    <select name="id_medicamento" required class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                    <select id="remesa-select-med" name="id_medicamento" required class="w-full px-3 py-2 rounded-lg border border-slate-300">
                         @foreach($medicamentos as $m)
-                            <option value="{{ $m->id_medicamento }}">
-                                {{ $m->nombre_comercial }} ({{ $m->laboratorio }}) {{ ($m->requiere_receta || $m->tipo_controlado) ? '— [Receta Retenida]' : '' }}
+                            <option value="{{ $m->id_medicamento }}" data-ean="{{ $m->codigo_barras }}">
+                                [{{ $m->codigo_barras }}] {{ $m->nombre_comercial }} ({{ $m->laboratorio }}) {{ ($m->requiere_receta || $m->tipo_controlado) ? '— [Receta Retenida]' : '' }}
                             </option>
                         @endforeach
                     </select>
@@ -1021,12 +1061,13 @@
             const name = normalizeInvStr(tr.getAttribute('data-name'));
             const sub = normalizeInvStr(tr.getAttribute('data-sub'));
             const code = normalizeInvStr(tr.getAttribute('data-code'));
+            const ean = normalizeInvStr(tr.getAttribute('data-ean'));
             const lab = normalizeInvStr(tr.getAttribute('data-lab'));
             const txt = normalizeInvStr(tr.textContent);
             const rowCond = tr.getAttribute('data-condicion') || '';
             const rowFefo = tr.getAttribute('data-fefo') || '';
 
-            const matchesSearch = !q || name.includes(q) || sub.includes(q) || code.includes(q) || lab.includes(q) || txt.includes(q);
+            const matchesSearch = !q || name.includes(q) || sub.includes(q) || code.includes(q) || ean.includes(q) || lab.includes(q) || txt.includes(q);
             const matchesCond = !condVal || rowCond === condVal;
             const matchesFefo = !fefoVal || rowFefo === fefoVal;
 
@@ -1067,6 +1108,7 @@
             const rawName = tr.getAttribute('data-name') || '';
             const rawSub = tr.getAttribute('data-sub') || '';
             const rawCode = tr.getAttribute('data-code') || '';
+            const rawEan = tr.getAttribute('data-ean') || '';
             const rawLab = tr.getAttribute('data-lab') || '';
             const rawBadge = tr.getAttribute('data-badge') || '';
             const rawStock = tr.getAttribute('data-stock') || '';
@@ -1075,13 +1117,14 @@
             const nName = normalizeInvStr(rawName);
             const nSub = normalizeInvStr(rawSub);
             const nCode = normalizeInvStr(rawCode);
+            const nEan = normalizeInvStr(rawEan);
             const nLab = normalizeInvStr(rawLab);
 
-            const item = { rawName, rawSub, rawCode, rawLab, rawBadge, rawStock, rowCond };
+            const item = { rawName, rawSub, rawCode, rawEan, rawLab, rawBadge, rawStock, rowCond };
 
-            if (nName.startsWith(q) || nCode.startsWith(q) || nSub.startsWith(q)) {
+            if (nName.startsWith(q) || nCode.startsWith(q) || nEan.startsWith(q) || nSub.startsWith(q)) {
                 startsWithMatches.push(item);
-            } else if (nName.includes(q) || nSub.includes(q) || nCode.includes(q) || nLab.includes(q)) {
+            } else if (nName.includes(q) || nSub.includes(q) || nCode.includes(q) || nEan.includes(q) || nLab.includes(q)) {
                 containsMatches.push(item);
             }
         });
@@ -1159,6 +1202,64 @@
         filterInventoryTable('');
     }
 
+    function playInvScannerBeep(isAlert) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = isAlert ? 'sawtooth' : 'sine';
+            osc.frequency.setValueAtTime(isAlert ? 520 : 1350, ctx.currentTime);
+            gain.gain.setValueAtTime(0.16, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.09);
+        } catch (err) {}
+    }
+
+    function simulateInventoryScan(eanCode) {
+        const remesaModal = document.getElementById('modal-nueva-remesa');
+        if (remesaModal && !remesaModal.classList.contains('hidden')) {
+            const scanInput = document.getElementById('remesa-scan-ean');
+            if (scanInput) scanInput.value = eanCode;
+            matchRemesaMedicationByEan(eanCode);
+            return;
+        }
+
+        const input = document.getElementById('inv-live-search');
+        const dropdown = document.getElementById('inv-autocomplete-dropdown');
+        if (!input) return;
+
+        input.value = eanCode;
+        if (dropdown) dropdown.classList.add('hidden');
+        input.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-50/40');
+        setTimeout(() => {
+            input.classList.remove('ring-2', 'ring-emerald-400', 'bg-emerald-50/40');
+        }, 450);
+
+        playInvScannerBeep(eanCode === '780000100105');
+        filterInventoryTable(eanCode);
+    }
+
+    function matchRemesaMedicationByEan(rawEan) {
+        const clean = String(rawEan || '').trim();
+        const select = document.getElementById('remesa-select-med');
+        if (!select || !clean) return;
+
+        for (const opt of select.options) {
+            if ((opt.getAttribute('data-ean') || '') === clean) {
+                select.value = opt.value;
+                playInvScannerBeep(false);
+                select.classList.add('ring-2', 'ring-emerald-400');
+                setTimeout(() => select.classList.remove('ring-2', 'ring-emerald-400'), 500);
+                break;
+            }
+        }
+    }
+
     document.addEventListener('click', function(e) {
         const wrapper = document.getElementById('inv-search-wrapper');
         const dropdown = document.getElementById('inv-autocomplete-dropdown');
@@ -1172,6 +1273,40 @@
         if (input && input.value.trim() !== '') {
             filterInventoryTable(input.value);
         }
+
+        // Escucha Global de Pistola Lectora USB en Inventario (Keyboard Wedge < 45ms + Enter) y atajo F2
+        let invWedgeBuffer = '';
+        let invLastKeyTime = 0;
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F2') {
+                e.preventDefault();
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+                return;
+            }
+
+            const activeEl = document.activeElement;
+            const isTypingInInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+            if (isTypingInInput) return;
+
+            const now = Date.now();
+            if (now - invLastKeyTime > 80) {
+                invWedgeBuffer = '';
+            }
+            invLastKeyTime = now;
+
+            if (e.key === 'Enter' && invWedgeBuffer.length >= 6) {
+                e.preventDefault();
+                const code = invWedgeBuffer;
+                invWedgeBuffer = '';
+                simulateInventoryScan(code);
+            } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                invWedgeBuffer += e.key;
+            }
+        });
     });
 </script>
 @endsection

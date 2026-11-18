@@ -470,5 +470,13 @@ class ExampleTest extends TestCase
         ]);
         $updateResp->assertRedirect(route('pos.index'));
         $this->assertEquals(7, session("pos_cart.{$paracetamol->id_medicamento}.cantidad"));
+
+        // 3. Pistola lectora de código de barras con multiplicador rápido (ej: "3*780000100101")
+        $amoxicilina = Medication::where('codigo_barras', '780000100101')->firstOrFail();
+        $scanResp = $this->actingAs($vendedor)->post(route('pos.add'), [
+            'codigo_barras' => '3*780000100101',
+        ]);
+        $scanResp->assertRedirect(route('pos.index'));
+        $this->assertEquals(3, session("pos_cart.{$amoxicilina->id_medicamento}.cantidad"));
     }
 }

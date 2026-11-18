@@ -200,10 +200,16 @@ class SaleController extends Controller
         ]);
 
         $med = null;
+        $cantidadMultiplicador = null;
         if (! empty($data['id_medicamento'])) {
             $med = Medication::where('activo', true)->find($data['id_medicamento']);
         } elseif (! empty($data['codigo_barras'])) {
             $term = trim($data['codigo_barras']);
+            // Soporte para multiplicador de pistola láser farmacéutica (ej: "3*780000100104" o "5x780000100104")
+            if (preg_match('/^(\d{1,3})\s*[\*xX]\s*(.+)$/', $term, $matches)) {
+                $cantidadMultiplicador = max(1, (int) $matches[1]);
+                $term = trim($matches[2]);
+            }
             $med = Medication::where('activo', true)
                 ->where(function ($q) use ($term) {
                     $q->where('codigo_barras', $term)
@@ -216,7 +222,7 @@ class SaleController extends Controller
             return back()->with('error', 'Medicamento no encontrado en el catálogo.');
         }
 
-        $cantidadAgregar = (int) ($data['cantidad'] ?? 1);
+        $cantidadAgregar = $cantidadMultiplicador ?? (int) ($data['cantidad'] ?? 1);
         $cart = session('pos_cart', []);
         $cantidadActual = isset($cart[$med->id_medicamento]) ? (int) $cart[$med->id_medicamento]['cantidad'] : 0;
         $nuevaCantidad = $cantidadActual + $cantidadAgregar;
