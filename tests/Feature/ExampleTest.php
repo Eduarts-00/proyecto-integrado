@@ -300,12 +300,22 @@ class ExampleTest extends TestCase
         $this->assertStringContainsString('4. Convenios de Salud', $workbookXml);
         $zip->close();
 
-        // 2. Verificar vista de exportación PDF integral
+        // 2. Verificar vista de exportación PDF integral y filtrada por ámbito/período
         $pdfResp = $this->actingAs($admin)->get(route('dashboard.export.pdf'));
         $pdfResp->assertStatus(200);
         $pdfResp->assertSee('Reporte Integral de Gestión y Fiscalización');
         $pdfResp->assertSee('IVA Débito (19% SII)');
         $pdfResp->assertSee('Libro Oficial de Control ISP');
+
+        // 3. Verificar Dashboard Gerencial con KPIs reales y Centro de Exportación Parametrizado
+        $dashResp = $this->actingAs($admin)->get(route('dashboard.index', ['periodo' => '7dias']));
+        $dashResp->assertStatus(200);
+        $dashResp->assertSee('Centro de Exportación Oficial y Reportes Reglamentarios');
+        $dashResp->assertSee('Valorización de Inventario');
+        $dashResp->assertSee('Arqueo de Caja — Últimas Boletas Emitidas en POS');
+
+        $excelVentasResp = $this->actingAs($admin)->get(route('dashboard.export.excel', ['tipo' => 'ventas', 'periodo' => 'hoy']));
+        $excelVentasResp->assertStatus(200);
     }
 
     /**
