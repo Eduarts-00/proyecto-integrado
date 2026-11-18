@@ -83,22 +83,20 @@
     <!-- Barra de Búsqueda Predictiva y Filtros de Inventario -->
     <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-            <!-- Buscador con Autocompletado en Vivo + Lector Pistola EAN -->
+            <!-- Buscador con Autocompletado en Vivo + Lector EAN -->
             <div class="lg:col-span-6 relative" id="inv-search-wrapper">
                 <div class="flex items-center justify-between mb-1">
                     <label for="inv-live-search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        Buscador y Lector Pistola EAN (Sugerencias en vivo)
+                        Buscador de Inventario y Lotes (Sugerencias en vivo)
                     </label>
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold"
-                          title="Puedes pistolear cualquier caja física o presionar F2 para buscar instantáneamente por código EAN-13">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Pistola USB Activa (F2)
+                    <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full"
+                          title="Puedes escanear cualquier caja física o presionar F2 para buscar instantáneamente por código EAN-13">
+                        Escáner Activo (F2)
                     </span>
                 </div>
                 <form action="{{ route('inventario.index') }}" method="GET" onsubmit="event.preventDefault(); filterInventoryTable();" autocomplete="off">
                     <input type="hidden" name="ubicacion" value="{{ $ubicacion }}">
                     <div class="relative">
-                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs pointer-events-none">🔍</span>
                         <input type="text"
                                id="inv-live-search"
                                name="q"
@@ -106,8 +104,8 @@
                                autocomplete="off"
                                oninput="handleInventorySearchInput(this.value)"
                                onfocus="handleInventorySearchInput(this.value)"
-                               placeholder="Pistolea código EAN-13 o escribe medicamento, principio activo, laboratorio o lote..."
-                               class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none transition">
+                               placeholder="Escanear código EAN-13 o escribir medicamento, principio activo, laboratorio o lote..."
+                               class="w-full pl-3.5 pr-8 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none transition">
                         <button type="button"
                                 id="btn-clear-inv-search"
                                 onclick="clearInventoryFilters()"
@@ -172,29 +170,12 @@
             </div>
         </div>
 
-        <!-- Barra inferior de estado de búsqueda, simulación de pistoleo y contador -->
+        <!-- Barra inferior de estado de búsqueda y contador -->
         <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div class="flex flex-wrap items-center gap-2 text-slate-500">
                 <span class="inline-flex items-center gap-1 font-medium">
                     Vista activa: <strong class="text-slate-800">{{ $ubicacion }}</strong>
                 </span>
-                <span class="text-slate-300">|</span>
-                <span class="text-[11px] font-bold text-slate-600">⚡ Simular Pistoleo EAN:</span>
-                <button type="button"
-                        onclick="simulateInventoryScan('780000100104')"
-                        class="px-2 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 text-[11px] font-semibold transition">
-                    🔫 Paracetamol (780...104)
-                </button>
-                <button type="button"
-                        onclick="simulateInventoryScan('780000100107')"
-                        class="px-2 py-0.5 rounded bg-slate-100 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 text-[11px] font-semibold transition">
-                    🔫 Losartán (780...107)
-                </button>
-                <button type="button"
-                        onclick="simulateInventoryScan('780000100105')"
-                        class="px-2 py-0.5 rounded bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 text-[11px] font-semibold transition">
-                    🔒 Clonazepam (780...105)
-                </button>
                 <button type="button"
                         id="btn-reset-inv-filters"
                         onclick="clearInventoryFilters()"
@@ -942,16 +923,15 @@
                 @csrf
                 <div class="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 space-y-1.5">
                     <div class="flex items-center justify-between">
-                        <label for="remesa-scan-ean" class="font-bold text-emerald-950 flex items-center gap-1">
-                            <span>🔫</span>
-                            <span>Pistolear Código de Barras de la Caja (EAN-13)</span>
+                        <label for="remesa-scan-ean" class="font-bold text-emerald-950">
+                            Código de Barras de la Caja (EAN-13)
                         </label>
-                        <span class="text-[10px] font-bold text-emerald-700">Autoselección rápida</span>
+                        <span class="text-[10px] font-bold text-emerald-700">Autoselección por escáner</span>
                     </div>
                     <input type="text"
                            id="remesa-scan-ean"
                            oninput="matchRemesaMedicationByEan(this.value)"
-                           placeholder="Pistolea o pega el código EAN (ej: 780000100104)..."
+                           placeholder="Escanear o digitar código EAN (ej: 780000100104)..."
                            class="w-full px-3 py-1.5 rounded-lg border border-emerald-300 bg-white font-mono-code text-xs outline-none focus:border-emerald-600">
                 </div>
                 <div>

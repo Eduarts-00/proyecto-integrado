@@ -61,39 +61,27 @@
                     </div>
                 </div>
 
-                <!-- Lector Pistola de Código de Barras (Modo Global HID USB + Multiplicador N*EAN) -->
+                <!-- Lector de Código de Barras (Modo Global HID USB + Multiplicador N*EAN) -->
                 <div class="lg:col-span-5">
                     <div class="flex items-center justify-between mb-1">
                         <label for="pos-barcode-input" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                            Pistola Código de Barras (EAN)
+                            Lector Código de Barras (EAN)
                         </label>
-                        <div class="flex items-center gap-1.5">
-                            <button type="button"
-                                    id="btn-toggle-beep"
-                                    onclick="toggleScannerAudio()"
-                                    class="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold border border-slate-200 transition"
-                                    title="Activar o silenciar sonido Beep de caja registradora">
-                                🔊 Beep ON
-                            </button>
-                            <span id="scanner-status-badge"
-                                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold"
-                                  title="Escucha global activa: puedes pistolear en cualquier momento sin hacer clic en la caja o presionar F2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Lector USB Activo (F2)
-                            </span>
-                        </div>
+                        <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full"
+                              title="Escucha global activa: puedes escanear directamente o presionar F2">
+                            Escáner Activo (F2)
+                        </span>
                     </div>
                     <form id="pos-barcode-form" action="{{ route('pos.add') }}" method="POST" class="flex gap-1.5" onsubmit="return handleBarcodeFormSubmit(event)">
                         @csrf
                         <div class="relative flex-1">
-                            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-red-500 text-xs pointer-events-none" title="Láser EAN-13">🔫</span>
                             <input type="text"
                                    id="pos-barcode-input"
                                    name="codigo_barras"
                                    required
                                    autocomplete="off"
-                                   placeholder="Pistolea EAN o 3*EAN..."
-                                   class="w-full pl-8 pr-2 py-2.5 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 font-mono-code font-bold text-slate-900 outline-none transition">
+                                   placeholder="Código EAN o 3*EAN..."
+                                   class="w-full px-3 py-2.5 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 font-mono-code font-bold text-slate-900 outline-none transition">
                         </div>
                         <input type="number"
                                id="pos-barcode-qty"
@@ -101,58 +89,13 @@
                                min="1"
                                max="999"
                                value="1"
-                               title="Cantidad de cajas a escanear (también puedes digitar 3*EAN)"
+                               title="Cantidad de unidades a escanear (o usa 3*EAN)"
                                class="w-14 px-2 py-2.5 text-xs text-center font-mono-code font-bold rounded-lg border border-slate-300 focus:border-[#1E40AF] outline-none">
                         <button type="submit" class="px-3 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shrink-0 transition">
                             + EAN
                         </button>
                     </form>
                 </div>
-            </div>
-
-            <!-- Visor HUD de Lectura Láser Instantánea + Botones de Simulación de Pistoleo en 1 Clic -->
-            <div class="pt-2.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/70 -mx-4 px-4 py-2">
-                <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <span class="font-bold text-slate-600 flex items-center gap-1">
-                        <span>⚡</span>
-                        <span>Simular Pistola Láser:</span>
-                    </span>
-                    <button type="button"
-                            onclick="simulateLaserScan('780000100104')"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-800 font-semibold transition flex items-center gap-1 shadow-2xs"
-                            title="Simular disparo láser EAN-13: Paracetamol 500mg (Venta Libre)">
-                        <span>🔫</span>
-                        <span>Paracetamol</span>
-                        <span class="font-mono-code text-[10px] text-slate-400">780...104</span>
-                    </button>
-                    <button type="button"
-                            onclick="simulateLaserScan('780000100107')"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-[#1E40AF] font-semibold transition flex items-center gap-1 shadow-2xs"
-                            title="Simular disparo láser EAN-13: Losartán 50mg (Convenio GES)">
-                        <span>🔫</span>
-                        <span>Losartán</span>
-                        <span class="font-mono-code text-[10px] text-blue-600">GES</span>
-                    </button>
-                    <button type="button"
-                            onclick="simulateLaserScan('3*780000100101')"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-700 hover:text-indigo-800 font-semibold transition flex items-center gap-1 shadow-2xs"
-                            title="Simular multiplicador de pistola 3*EAN: 3 cajas de Amoxicilina 500mg en 1 solo disparo">
-                        <span>🔫</span>
-                        <span>3x Amoxicilina</span>
-                        <span class="font-mono-code text-[10px] text-indigo-600 font-bold">3*EAN</span>
-                    </button>
-                    <button type="button"
-                            onclick="simulateLaserScan('780000100105')"
-                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-red-50 border border-red-200 hover:border-red-300 text-red-700 font-semibold transition flex items-center gap-1 shadow-2xs"
-                            title="Simular disparo láser de psicotrópico controlado: Clonazepam 2mg (Activa doble tono de alerta ISP)">
-                        <span>🔒</span>
-                        <span>Clonazepam</span>
-                        <span class="font-mono-code text-[10px] text-red-500">Alerta ISP</span>
-                    </button>
-                </div>
-
-                <!-- Indicador HUD del último código pistoleado -->
-                <div id="laser-scan-hud" class="hidden items-center gap-2 px-3 py-1 rounded-lg text-[11px] font-bold border transition-all"></div>
             </div>
 
             <!-- Filtros Rápidos por Categoría Terapéutica y Cobertura de Convenio -->
@@ -899,23 +842,9 @@
     }
 
     // =========================================================================
-    // MOTOR DE PISTOLA LÁSER EAN-13 (MODO KEYBOARD WEDGE HID + BEEP DE CAJA)
+    // MOTOR DE LECTOR DE CÓDIGO DE BARRAS EAN-13 (MODO KEYBOARD WEDGE HID)
     // =========================================================================
-    window.__scannerAudioEnabled = true;
-
-    function toggleScannerAudio() {
-        window.__scannerAudioEnabled = !window.__scannerAudioEnabled;
-        const btn = document.getElementById('btn-toggle-beep');
-        if (btn) {
-            btn.textContent = window.__scannerAudioEnabled ? '🔊 Beep ON' : '🔇 Beep OFF';
-            btn.className = window.__scannerAudioEnabled
-                ? 'px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold border border-slate-200 transition'
-                : 'px-2 py-0.5 rounded-full bg-slate-200 text-slate-500 text-[10px] font-bold border border-slate-300 transition';
-        }
-    }
-
     function playScannerBeep(mode) {
-        if (!window.__scannerAudioEnabled) return;
         try {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (!AudioCtx) return;
@@ -936,7 +865,6 @@
                     osc.stop(ctx.currentTime + idx * 0.13 + 0.11);
                 });
             } else if (mode === 'error') {
-                // Tono grave de error (código no encontrado o sin stock)
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'square';
@@ -948,7 +876,6 @@
                 osc.start();
                 osc.stop(ctx.currentTime + 0.25);
             } else {
-                // Beep agudo clásico de lector láser de farmacia (1350 Hz, 80ms)
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 osc.type = 'sine';
@@ -960,9 +887,7 @@
                 osc.start();
                 osc.stop(ctx.currentTime + 0.085);
             }
-        } catch (err) {
-            // Ignorar si el navegador bloquea Web Audio antes de interacción
-        }
+        } catch (err) {}
     }
 
     function parseBarcodeToken(rawInput) {
@@ -987,23 +912,6 @@
         return { qty, term, med };
     }
 
-    function showLaserHud(med, finalQty, rawCode) {
-        const hud = document.getElementById('laser-scan-hud');
-        if (!hud) return;
-
-        if (!med) {
-            hud.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[11px] font-bold border bg-red-50 border-red-300 text-red-700';
-            hud.innerHTML = `<span>⚠️ EAN no encontrado:</span> <span class="font-mono-code">${rawCode}</span>`;
-        } else if (med.es_controlado) {
-            hud.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[11px] font-bold border bg-amber-50 border-amber-300 text-amber-900';
-            hud.innerHTML = `<span>🔒 LÁSER ISP:</span> <span>${finalQty}x ${med.nombre_comercial}</span> <span class="font-mono-code text-[10px] text-amber-700">(${med.codigo_barras}) — Exige PIN Q.F.</span>`;
-        } else {
-            hud.className = 'inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[11px] font-bold border bg-emerald-50 border-emerald-300 text-emerald-800';
-            hud.innerHTML = `<span>📡 LÁSER OK:</span> <span>${finalQty}x ${med.nombre_comercial}</span> <span class="font-mono-code text-[10px] text-emerald-700">(${med.codigo_barras})</span>`;
-        }
-        hud.classList.remove('hidden');
-    }
-
     function handleBarcodeFormSubmit(e) {
         const codeInput = document.getElementById('pos-barcode-input');
         const qtyInput = document.getElementById('pos-barcode-qty');
@@ -1019,37 +927,13 @@
 
         if (!parsed.med) {
             playScannerBeep('error');
-            showLaserHud(null, finalQty, rawVal);
         } else if (parsed.med.es_controlado) {
             playScannerBeep('controlled');
-            showLaserHud(parsed.med, finalQty, rawVal);
         } else {
             playScannerBeep('ok');
-            showLaserHud(parsed.med, finalQty, rawVal);
         }
 
         return true;
-    }
-
-    function simulateLaserScan(rawCode) {
-        const form = document.getElementById('pos-barcode-form');
-        const codeInput = document.getElementById('pos-barcode-input');
-        const qtyInput = document.getElementById('pos-barcode-qty');
-        if (!form || !codeInput) return;
-
-        const parsed = parseBarcodeToken(rawCode);
-        codeInput.value = rawCode;
-        if (qtyInput) {
-            qtyInput.value = parsed.qty !== null ? parsed.qty : 1;
-        }
-
-        codeInput.classList.add('ring-2', 'ring-emerald-400', 'bg-emerald-50/40');
-        setTimeout(() => {
-            codeInput.classList.remove('ring-2', 'ring-emerald-400', 'bg-emerald-50/40');
-        }, 450);
-
-        handleBarcodeFormSubmit();
-        form.submit();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
