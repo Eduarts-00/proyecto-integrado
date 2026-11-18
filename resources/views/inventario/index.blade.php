@@ -54,8 +54,8 @@
         </div>
     </div>
 
-    <!-- Pestañas de Segregación Física, Catálogo y Buscador Rápido -->
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+    <!-- Pestañas de Segregación Física y Catálogo -->
+    <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
             <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
                class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'VITRINA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
@@ -78,14 +78,109 @@
                 💊 Catálogo y Recetas ({{ $medicamentosCatalogo->count() }})
             </a>
         </div>
+    </div>
 
-        <div class="relative w-full lg:w-80">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs pointer-events-none">🔍</span>
-            <input type="text"
-                   id="inv-live-search"
-                   oninput="filterInventoryTable(this.value)"
-                   placeholder="Filtrar por nombre, laboratorio o lote..."
-                   class="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 bg-white text-xs focus:border-[#1E40AF] outline-none">
+    <!-- Barra de Búsqueda Predictiva y Filtros de Inventario -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
+            <!-- Buscador con Autocompletado en Vivo -->
+            <div class="lg:col-span-6 relative" id="inv-search-wrapper">
+                <label for="inv-live-search" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Buscador de Inventario y Lotes (Sugerencias en vivo)
+                </label>
+                <form action="{{ route('inventario.index') }}" method="GET" onsubmit="event.preventDefault(); filterInventoryTable();" autocomplete="off">
+                    <input type="hidden" name="ubicacion" value="{{ $ubicacion }}">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs pointer-events-none">🔍</span>
+                        <input type="text"
+                               id="inv-live-search"
+                               name="q"
+                               value="{{ $search ?? '' }}"
+                               autocomplete="off"
+                               oninput="handleInventorySearchInput(this.value)"
+                               onfocus="handleInventorySearchInput(this.value)"
+                               placeholder="Escribe medicamento, principio activo, laboratorio o código de lote (ej: Paracetamol, Losartán, LOT-2026)..."
+                               class="w-full pl-9 pr-8 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none">
+                        <button type="button"
+                                id="btn-clear-inv-search"
+                                onclick="clearInventoryFilters()"
+                                class="{{ empty($search) ? 'hidden' : '' }} absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold"
+                                title="Limpiar búsqueda">
+                            ✕
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Desplegable de Sugerencias Predictivas de Inventario -->
+                <div id="inv-autocomplete-dropdown"
+                     class="hidden absolute left-0 right-0 top-full mt-1.5 z-40 bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden">
+                    <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-[11px]">
+                        <span id="inv-autocomplete-header" class="font-bold text-slate-600">Sugerencias en {{ $ubicacion }}</span>
+                        <span class="text-slate-400">Haz clic para filtrar</span>
+                    </div>
+                    <div id="inv-autocomplete-results" class="max-h-72 overflow-y-auto divide-y divide-slate-100"></div>
+                </div>
+            </div>
+
+            <!-- Filtro por Condición de Venta -->
+            <div class="lg:col-span-3">
+                <label for="inv-filter-condicion" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                    Condición de Venta
+                </label>
+                <select id="inv-filter-condicion"
+                        onchange="filterInventoryTable()"
+                        class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:border-[#1E40AF] outline-none">
+                    <option value="">Todas las condiciones</option>
+                    <option value="libre">✓ Solo Venta Libre</option>
+                    <option value="retenida">🔒 Solo Receta Retenida ISP</option>
+                </select>
+            </div>
+
+            <!-- Filtro por Semáforo FEFO o Estado de Catálogo -->
+            <div class="lg:col-span-3">
+                @if($ubicacion === 'CATALOGO')
+                    <label for="inv-filter-fefo" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                        Estado en Catálogo
+                    </label>
+                    <select id="inv-filter-fefo"
+                            onchange="filterInventoryTable()"
+                            class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:border-[#1E40AF] outline-none">
+                        <option value="">Todos los estados</option>
+                        <option value="activo">✓ Solo Activos</option>
+                        <option value="inactivo">✕ Solo Deshabilitados</option>
+                    </select>
+                @else
+                    <label for="inv-filter-fefo" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                        Alerta de Vencimiento (FEFO)
+                    </label>
+                    <select id="inv-filter-fefo"
+                            onchange="filterInventoryTable()"
+                            class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:border-[#1E40AF] outline-none">
+                        <option value="">Todos los vencimientos FEFO</option>
+                        <option value="critico">● Crítico / Por vencer (≤ 30 días)</option>
+                        <option value="alerta">▲ Alerta preventiva (31 a 90 días)</option>
+                        <option value="optimo">✓ Vigencia óptima (&gt; 90 días)</option>
+                    </select>
+                @endif
+            </div>
+        </div>
+
+        <!-- Barra inferior de estado de búsqueda y contador -->
+        <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2 text-slate-500">
+                <span class="inline-flex items-center gap-1 font-medium">
+                    Vista activa: <strong class="text-slate-800">{{ $ubicacion }}</strong>
+                </span>
+                <button type="button"
+                        id="btn-reset-inv-filters"
+                        onclick="clearInventoryFilters()"
+                        class="hidden px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition">
+                    ↺ Mostrar todos
+                </button>
+            </div>
+            <span id="inv-visible-counter" class="text-[11px] font-semibold text-slate-500">
+                Mostrando {{ $ubicacion === 'CATALOGO' ? $medicamentosCatalogo->count() : $lotes->count() }} registros
+            </span>
         </div>
     </div>
 
@@ -117,12 +212,20 @@
                             @endif
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 text-xs">
+                    <tbody id="inv-table-body" class="divide-y divide-slate-100 text-xs">
                         @foreach($medicamentosCatalogo as $med)
                             @php
                                 $esRestringido = $med->requiere_receta || $med->tipo_controlado;
                             @endphp
-                            <tr class="hover:bg-slate-50/80 {{ ! $med->activo ? 'bg-slate-50/60 opacity-70' : '' }}">
+                            <tr class="inv-filterable-row hover:bg-slate-50/80 {{ ! $med->activo ? 'bg-slate-50/60 opacity-70' : '' }}"
+                                data-name="{{ $med->nombre_comercial }}"
+                                data-sub="{{ $med->principio_activo }}"
+                                data-code="{{ $med->codigo_barras }}"
+                                data-lab="{{ $med->laboratorio }}"
+                                data-condicion="{{ $esRestringido ? 'retenida' : 'libre' }}"
+                                data-fefo="{{ $med->activo ? 'activo' : 'inactivo' }}"
+                                data-badge="{{ $esRestringido ? '🔒 Retenida ISP' : '✓ Venta Libre' }}"
+                                data-stock="Vit: {{ $med->stock_vitrina }} / Bod: {{ $med->stock_bodega }}">
                                 <td class="py-3.5 px-4 font-mono-code text-[11px] text-slate-500 whitespace-nowrap">
                                     {{ $med->codigo_barras }}
                                 </td>
@@ -200,6 +303,15 @@
                                 @endif
                             </tr>
                         @endforeach
+                        <tr id="inv-no-results-row" class="hidden">
+                            <td colspan="{{ $canManageMedications ? 8 : 7 }}" class="py-10 text-center text-slate-500 text-xs">
+                                <div class="font-bold text-slate-700 mb-1">🔍 No se encontraron medicamentos con esos criterios de búsqueda</div>
+                                <p class="text-[11px] text-slate-400 mb-3">Intenta con otro nombre comercial, principio activo, código de barras o limpia los filtros activos.</p>
+                                <button type="button" onclick="clearInventoryFilters()" class="px-3.5 py-1.5 rounded-lg bg-[#1E40AF] text-white font-bold text-xs">
+                                    Limpiar búsqueda y filtros
+                                </button>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -238,12 +350,13 @@
                             @endif
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 text-xs">
+                    <tbody id="inv-table-body" class="divide-y divide-slate-100 text-xs">
                         @forelse($lotes as $lote)
                             @php
                                 $dias = $lote->dias_restantes;
                                 $sem = $lote->semaforo_fefo;
                                 $esControlado = $lote->medicamento?->requiere_receta || $lote->medicamento?->tipo_controlado;
+                                $fefoKey = ($sem === 'critico' || $sem === 'vencido') ? 'critico' : ($sem === 'alerta' ? 'alerta' : 'optimo');
                                 $rowBg = ! $lote->activo
                                     ? 'bg-red-50/30 opacity-85'
                                     : match ($sem) {
@@ -252,18 +365,31 @@
                                         default => 'hover:bg-slate-50/80',
                                     };
                             @endphp
-                            <tr class="{{ $rowBg }} transition">
-                                <td class="py-3.5 px-4 font-medium {{ $lote->activo ? 'text-slate-900' : 'text-slate-500 line-through' }} flex items-center gap-2">
-                                    @if(! $lote->activo)
-                                        <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
-                                    @elseif($sem === 'critico' || $sem === 'vencido')
-                                        <span class="w-2 h-2 rounded-full bg-[#EF4444] shrink-0"></span>
-                                    @elseif($sem === 'alerta')
-                                        <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
-                                    @else
-                                        <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                    @endif
-                                    <span>{{ $lote->medicamento?->nombre_comercial }}</span>
+                            <tr class="inv-filterable-row {{ $rowBg }} transition"
+                                data-name="{{ $lote->medicamento?->nombre_comercial }}"
+                                data-sub="{{ $lote->medicamento?->principio_activo }}"
+                                data-code="{{ $lote->lote_codigo }}"
+                                data-lab="{{ $lote->medicamento?->laboratorio }}"
+                                data-condicion="{{ $esControlado ? 'retenida' : 'libre' }}"
+                                data-fefo="{{ $fefoKey }}"
+                                data-badge="{{ $esControlado ? '🔒 Retenida' : 'Venta Libre' }}"
+                                data-stock="{{ $lote->ubicacion }}: {{ $lote->cantidad }} u. ({{ $dias }}d)">
+                                <td class="py-3.5 px-4 font-medium {{ $lote->activo ? 'text-slate-900' : 'text-slate-500 line-through' }}">
+                                    <div class="flex items-center gap-2">
+                                        @if(! $lote->activo)
+                                            <span class="w-2 h-2 rounded-full bg-red-400 shrink-0"></span>
+                                        @elseif($sem === 'critico' || $sem === 'vencido')
+                                            <span class="w-2 h-2 rounded-full bg-[#EF4444] shrink-0"></span>
+                                        @elseif($sem === 'alerta')
+                                            <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                                        @else
+                                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                        @endif
+                                        <div>
+                                            <div class="font-bold">{{ $lote->medicamento?->nombre_comercial }}</div>
+                                            <div class="text-[11px] text-slate-400 font-normal">{{ $lote->medicamento?->principio_activo }}</div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="py-3.5 px-4 whitespace-nowrap">
                                     @if($esControlado)
@@ -380,6 +506,15 @@
                                 </td>
                             </tr>
                         @endforelse
+                        <tr id="inv-no-results-row" class="hidden">
+                            <td colspan="{{ $canToggleLote ? 10 : 9 }}" class="py-10 text-center text-slate-500 text-xs">
+                                <div class="font-bold text-slate-700 mb-1">🔍 No se encontraron lotes en {{ $ubicacion }} con esos criterios</div>
+                                <p class="text-[11px] text-slate-400 mb-3">Intenta con otro nombre de medicamento, código de lote, laboratorio o limpia los filtros activos.</p>
+                                <button type="button" onclick="clearInventoryFilters()" class="px-3.5 py-1.5 rounded-lg bg-[#1E40AF] text-white font-bold text-xs">
+                                    Limpiar búsqueda y filtros
+                                </button>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -837,20 +972,206 @@
 @endif
 
 <script>
-    function filterInventoryTable(rawQuery) {
-        const q = String(rawQuery || '')
+    function normalizeInvStr(str) {
+        return String(str || '')
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .trim();
-
-        document.querySelectorAll('table tbody tr').forEach(tr => {
-            const txt = String(tr.textContent || '')
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '');
-            tr.style.display = (!q || txt.includes(q)) ? '' : 'none';
-        });
     }
+
+    function escapeInvHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function handleInventorySearchInput(rawQuery) {
+        filterInventoryTable(rawQuery);
+        renderInventoryAutocomplete(rawQuery);
+    }
+
+    function filterInventoryTable(optionalQuery) {
+        const searchInput = document.getElementById('inv-live-search');
+        const condSelect = document.getElementById('inv-filter-condicion');
+        const fefoSelect = document.getElementById('inv-filter-fefo');
+        const clearBtn = document.getElementById('btn-clear-inv-search');
+        const resetBtn = document.getElementById('btn-reset-inv-filters');
+        const counterEl = document.getElementById('inv-visible-counter');
+        const noResultsRow = document.getElementById('inv-no-results-row');
+
+        const rawQ = optionalQuery !== undefined ? optionalQuery : (searchInput ? searchInput.value : '');
+        const q = normalizeInvStr(rawQ);
+        const condVal = condSelect ? condSelect.value : '';
+        const fefoVal = fefoSelect ? fefoSelect.value : '';
+
+        if (clearBtn) {
+            clearBtn.classList.toggle('hidden', q.length === 0);
+        }
+        if (resetBtn) {
+            resetBtn.classList.toggle('hidden', q.length === 0 && !condVal && !fefoVal);
+        }
+
+        const rows = document.querySelectorAll('tr.inv-filterable-row');
+        let visibleCount = 0;
+
+        rows.forEach(tr => {
+            const name = normalizeInvStr(tr.getAttribute('data-name'));
+            const sub = normalizeInvStr(tr.getAttribute('data-sub'));
+            const code = normalizeInvStr(tr.getAttribute('data-code'));
+            const lab = normalizeInvStr(tr.getAttribute('data-lab'));
+            const txt = normalizeInvStr(tr.textContent);
+            const rowCond = tr.getAttribute('data-condicion') || '';
+            const rowFefo = tr.getAttribute('data-fefo') || '';
+
+            const matchesSearch = !q || name.includes(q) || sub.includes(q) || code.includes(q) || lab.includes(q) || txt.includes(q);
+            const matchesCond = !condVal || rowCond === condVal;
+            const matchesFefo = !fefoVal || rowFefo === fefoVal;
+
+            if (matchesSearch && matchesCond && matchesFefo) {
+                tr.style.display = '';
+                visibleCount++;
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+
+        if (noResultsRow) {
+            noResultsRow.classList.toggle('hidden', rows.length === 0 || visibleCount > 0);
+        }
+        if (counterEl) {
+            counterEl.textContent = `Mostrando ${visibleCount} de ${rows.length} registros`;
+        }
+    }
+
+    function renderInventoryAutocomplete(rawQuery) {
+        const dropdown = document.getElementById('inv-autocomplete-dropdown');
+        const resultsBox = document.getElementById('inv-autocomplete-results');
+        const headerEl = document.getElementById('inv-autocomplete-header');
+        if (!dropdown || !resultsBox) return;
+
+        const q = normalizeInvStr(rawQuery);
+        if (!q) {
+            dropdown.classList.add('hidden');
+            resultsBox.innerHTML = '';
+            return;
+        }
+
+        const rows = Array.from(document.querySelectorAll('tr.inv-filterable-row'));
+        const startsWithMatches = [];
+        const containsMatches = [];
+
+        rows.forEach(tr => {
+            const rawName = tr.getAttribute('data-name') || '';
+            const rawSub = tr.getAttribute('data-sub') || '';
+            const rawCode = tr.getAttribute('data-code') || '';
+            const rawLab = tr.getAttribute('data-lab') || '';
+            const rawBadge = tr.getAttribute('data-badge') || '';
+            const rawStock = tr.getAttribute('data-stock') || '';
+            const rowCond = tr.getAttribute('data-condicion') || '';
+
+            const nName = normalizeInvStr(rawName);
+            const nSub = normalizeInvStr(rawSub);
+            const nCode = normalizeInvStr(rawCode);
+            const nLab = normalizeInvStr(rawLab);
+
+            const item = { rawName, rawSub, rawCode, rawLab, rawBadge, rawStock, rowCond };
+
+            if (nName.startsWith(q) || nCode.startsWith(q) || nSub.startsWith(q)) {
+                startsWithMatches.push(item);
+            } else if (nName.includes(q) || nSub.includes(q) || nCode.includes(q) || nLab.includes(q)) {
+                containsMatches.push(item);
+            }
+        });
+
+        const combined = startsWithMatches.concat(containsMatches).slice(0, 8);
+        if (combined.length === 0) {
+            dropdown.classList.add('hidden');
+            resultsBox.innerHTML = '';
+            return;
+        }
+
+        if (headerEl) {
+            headerEl.textContent = startsWithMatches.length > 0
+                ? `Sugerencias que comienzan con "${rawQuery.trim()}" (${combined.length})`
+                : `Coincidencias encontradas (${combined.length})`;
+        }
+
+        resultsBox.innerHTML = combined.map(item => {
+            const badgeClass = item.rowCond === 'retenida'
+                ? 'bg-red-50 text-red-700 border-red-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            const safeFilterVal = escapeInvHtml(item.rawCode || item.rawName);
+
+            return `
+                <button type="button"
+                        onclick="selectInventorySuggestion('${safeFilterVal.replace(/'/g, "\\'")}')"
+                        class="w-full px-3.5 py-2.5 text-left hover:bg-blue-50/70 transition flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-900 text-xs truncate">${escapeInvHtml(item.rawName)}</div>
+                        <div class="text-[11px] text-slate-500 truncate">
+                            ${escapeInvHtml(item.rawSub)} • <span class="text-slate-600 font-medium">${escapeInvHtml(item.rawLab)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 font-mono-code text-[10px] text-slate-700">
+                            ${escapeInvHtml(item.rawCode)}
+                        </span>
+                        <span class="px-2 py-0.5 rounded bg-blue-50 text-[#1E40AF] font-mono-code font-bold text-[10px]">
+                            ${escapeInvHtml(item.rawStock)}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full border text-[10px] font-bold ${badgeClass}">
+                            ${escapeInvHtml(item.rawBadge)}
+                        </span>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        dropdown.classList.remove('hidden');
+    }
+
+    function selectInventorySuggestion(val) {
+        const input = document.getElementById('inv-live-search');
+        const dropdown = document.getElementById('inv-autocomplete-dropdown');
+        if (input) {
+            input.value = val;
+        }
+        if (dropdown) {
+            dropdown.classList.add('hidden');
+        }
+        filterInventoryTable(val);
+    }
+
+    function clearInventoryFilters() {
+        const input = document.getElementById('inv-live-search');
+        const condSelect = document.getElementById('inv-filter-condicion');
+        const fefoSelect = document.getElementById('inv-filter-fefo');
+        const dropdown = document.getElementById('inv-autocomplete-dropdown');
+
+        if (input) input.value = '';
+        if (condSelect) condSelect.value = '';
+        if (fefoSelect) fefoSelect.value = '';
+        if (dropdown) dropdown.classList.add('hidden');
+
+        filterInventoryTable('');
+    }
+
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('inv-search-wrapper');
+        const dropdown = document.getElementById('inv-autocomplete-dropdown');
+        if (wrapper && dropdown && !wrapper.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('inv-live-search');
+        if (input && input.value.trim() !== '') {
+            filterInventoryTable(input.value);
+        }
+    });
 </script>
 @endsection

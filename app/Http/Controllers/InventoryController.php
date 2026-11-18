@@ -22,6 +22,7 @@ class InventoryController extends Controller
         if (! in_array($ubicacion, ['VITRINA', 'BODEGA', 'TODOS', 'BAJAS', 'CATALOGO'], true)) {
             $ubicacion = 'VITRINA';
         }
+        $search = trim((string) $request->query('q', ''));
 
         $query = Batch::with('medicamento')
             ->where('cantidad', '>', 0);
@@ -70,6 +71,7 @@ class InventoryController extends Controller
         return view('inventario.index', compact(
             'lotes',
             'ubicacion',
+            'search',
             'bajasCount',
             'alertasFefo',
             'lotesBodega',
