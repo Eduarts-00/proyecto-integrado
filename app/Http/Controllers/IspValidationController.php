@@ -67,7 +67,7 @@ class IspValidationController extends Controller
             'rut_paciente' => ['required', 'string', 'max:15'],
             'rut_medico' => ['required', 'string', 'max:15'],
             'folio_receta' => ['required', 'string', 'max:60'],
-            'pin_qf' => ['required', 'string'],
+            'pin_qf' => ['required', 'string', 'max:20'],
         ]);
 
         $user = $request->user();

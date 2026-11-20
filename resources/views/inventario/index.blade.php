@@ -569,7 +569,7 @@
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Precio Unitario ($)</label>
-                        <input type="number" name="precio_unitario" min="100" step="10" value="6990" required
+                        <input type="number" name="precio_unitario" min="100" max="9999999" step="10" value="6990" required
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                 </div>
@@ -587,7 +587,7 @@
                     <div class="grid grid-cols-4 gap-2.5">
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-1">Cantidad</label>
-                            <input type="number" name="cantidad_inicial" min="0" value="50"
+                            <input type="number" name="cantidad_inicial" min="0" max="100000" value="50"
                                    class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono-code">
                         </div>
                         <div>
@@ -651,7 +651,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Precio Unitario ($)</label>
-                        <input type="number" id="edit-med-precio" name="precio_unitario" min="1" step="1" required
+                        <input type="number" id="edit-med-precio" name="precio_unitario" min="1" max="9999999" step="1" required
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>

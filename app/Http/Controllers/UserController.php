@@ -29,8 +29,8 @@ class UserController extends Controller
             'rut' => ['required', 'string', 'max:15'],
             'nombre_completo' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:120', 'unique:usuarios,email'],
-            'id_rol' => ['required', 'integer', 'exists:roles,id_rol'],
-            'password' => ['required', 'string', 'min:8'],
+            'id_rol' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:roles,id_rol'],
+            'password' => ['required', 'string', 'min:8', 'max:120'],
             'pin_qf' => ['nullable', 'string', 'max:10'],
         ]);
 
@@ -83,9 +83,9 @@ class UserController extends Controller
                 'max:120',
                 Rule::unique('usuarios', 'email')->ignore($usuario->id_usuario, 'id_usuario'),
             ],
-            'id_rol' => ['required', 'integer', 'exists:roles,id_rol'],
+            'id_rol' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:roles,id_rol'],
             'activo' => ['required', 'boolean'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', 'min:8', 'max:120'],
             'pin_qf' => ['nullable', 'string', 'max:10'],
         ]);
 
@@ -147,7 +147,7 @@ class UserController extends Controller
     public function updateRole(Request $request, int $idUsuario)
     {
         $data = $request->validate([
-            'id_rol' => ['required', 'integer', 'exists:roles,id_rol'],
+            'id_rol' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:roles,id_rol'],
             'activo' => ['required', 'boolean'],
         ]);
 

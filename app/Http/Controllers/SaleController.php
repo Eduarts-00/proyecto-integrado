@@ -194,9 +194,9 @@ class SaleController extends Controller
     public function addItem(Request $request)
     {
         $data = $request->validate([
-            'id_medicamento' => ['nullable', 'integer'],
-            'codigo_barras' => ['nullable', 'string'],
-            'cantidad' => ['nullable', 'integer', 'min:1'],
+            'id_medicamento' => ['nullable', 'integer', 'min:1', 'max:2147483647'],
+            'codigo_barras' => ['nullable', 'string', 'max:60'],
+            'cantidad' => ['nullable', 'integer', 'min:1', 'max:9999'],
         ]);
 
         $med = null;
@@ -207,7 +207,7 @@ class SaleController extends Controller
             $term = trim($data['codigo_barras']);
             // Soporte para multiplicador de pistola láser farmacéutica (ej: "3*780000100104" o "5x780000100104")
             if (preg_match('/^(\d{1,3})\s*[\*xX]\s*(.+)$/', $term, $matches)) {
-                $cantidadMultiplicador = max(1, (int) $matches[1]);
+                $cantidadMultiplicador = min(999, max(1, (int) $matches[1]));
                 $term = trim($matches[2]);
             }
             $med = Medication::where('activo', true)
@@ -249,7 +249,7 @@ class SaleController extends Controller
     public function updateItemQuantity(Request $request, int $idMedicamento)
     {
         $data = $request->validate([
-            'cantidad' => ['required', 'integer', 'min:0'],
+            'cantidad' => ['required', 'integer', 'min:0', 'max:9999'],
         ]);
 
         $nuevaCantidad = (int) $data['cantidad'];
@@ -291,6 +291,9 @@ class SaleController extends Controller
 
     public function applyHealthDiscount(Request $request)
     {
+        $request->validate([
+            'id_convenio' => ['nullable', 'integer', 'min:1', 'max:2147483647'],
+        ]);
         $idConvenio = $request->input('id_convenio');
         session(['pos_convenio_id' => $idConvenio ?: null]);
 
@@ -310,7 +313,7 @@ class SaleController extends Controller
     public function requestPrescriptionQueue(Request $request)
     {
         $data = $request->validate([
-            'id_medicamento' => ['required', 'integer', 'exists:medicamentos,id_medicamento'],
+            'id_medicamento' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
             'rut_paciente' => ['required', 'string', 'max:15'],
             'rut_medico' => ['required', 'string', 'max:15'],
             'folio_receta' => ['required', 'string', 'max:60'],

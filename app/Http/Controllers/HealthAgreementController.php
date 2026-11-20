@@ -71,10 +71,10 @@ class HealthAgreementController extends Controller
             'nombre_convenio' => ['required', 'string', 'max:100'],
             'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
             'aplica_todo_catalogo' => ['nullable', 'boolean'],
-            'medicamentos_ids' => ['nullable', 'array'],
-            'medicamentos_ids.*' => ['integer', 'exists:medicamentos,id_medicamento'],
-            'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+            'medicamentos_ids' => ['nullable', 'array', 'max:500'],
+            'medicamentos_ids.*' => ['integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
+            'fecha_inicio' => ['nullable', 'date', 'after:2000-01-01', 'before:2100-01-01'],
+            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio', 'before:2100-01-01'],
         ]);
 
         $aplicaTodo = isset($data['aplica_todo_catalogo']) ? (bool) $data['aplica_todo_catalogo'] : true;
@@ -120,10 +120,10 @@ class HealthAgreementController extends Controller
             'nombre_convenio' => ['required', 'string', 'max:100'],
             'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
             'aplica_todo_catalogo' => ['nullable', 'boolean'],
-            'medicamentos_ids' => ['nullable', 'array'],
-            'medicamentos_ids.*' => ['integer', 'exists:medicamentos,id_medicamento'],
-            'fecha_inicio' => ['nullable', 'date'],
-            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+            'medicamentos_ids' => ['nullable', 'array', 'max:500'],
+            'medicamentos_ids.*' => ['integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
+            'fecha_inicio' => ['nullable', 'date', 'after:2000-01-01', 'before:2100-01-01'],
+            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio', 'before:2100-01-01'],
             'activo' => ['nullable', 'boolean'],
         ]);
 

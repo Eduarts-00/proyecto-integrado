@@ -489,4 +489,51 @@ class ExampleTest extends TestCase
         $scanResp->assertRedirect(route('pos.index'));
         $this->assertEquals(3, session("pos_cart.{$amoxicilina->id_medicamento}.cantidad"));
     }
+
+    /**
+     * Blindaje de Base de Datos y Separación del Frontend:
+     * Verifica que valores numéricos fuera de rango (ej. precio_unitario = 111111111111111111111)
+     * sean rechazados por la capa de validación antes de tocar SQL (evitando SQLSTATE[22003]),
+     * que se eliminen payloads XSS y que se incluyan cabeceras de seguridad HTTP.
+     */
+    public function test_blindaje_base_de_datos_contra_desbordamiento_numerico_y_xss(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $admin = User::where('rut', '10.111.222-3')->firstOrFail();
+        $med = Medication::firstOrFail();
+        $precioOriginal = (float) $med->precio_unitario;
+
+        // 1. Intento de desbordamiento numérico (Numeric value out of range en precio_unitario)
+        $overflowResp = $this->actingAs($admin)
+            ->from(route('inventario.index', ['ubicacion' => 'CATALOGO']))
+            ->put(route('inventario.medications.update', $med->id_medicamento), [
+                'nombre_comercial' => $med->nombre_comercial,
+                'principio_activo' => $med->principio_activo,
+                'laboratorio' => $med->laboratorio,
+                'precio_unitario' => '111111111111111111111111111',
+                'condicion_receta' => 'venta_libre',
+                'activo' => '1',
+            ]);
+
+        $overflowResp->assertRedirect(route('inventario.index', ['ubicacion' => 'CATALOGO']));
+        $overflowResp->assertSessionHasErrors('precio_unitario');
+        $this->assertEquals($precioOriginal, (float) $med->fresh()->precio_unitario);
+
+        // 2. Sanitización automática de etiquetas HTML/Script (Prevención XSS) y cabeceras OWASP
+        $xssResp = $this->actingAs($admin)->put(route('inventario.medications.update', $med->id_medicamento), [
+            'nombre_comercial' => '<script>alert(1)</script>Paracetamol Seguro 500mg',
+            'principio_activo' => '<b>Paracetamol</b>',
+            'laboratorio' => 'Laboratorio Chile',
+            'precio_unitario' => 2990,
+            'condicion_receta' => 'venta_libre',
+            'activo' => '1',
+        ]);
+
+        $xssResp->assertRedirect(route('inventario.index', ['ubicacion' => 'CATALOGO']));
+        $xssResp->assertHeader('X-Content-Type-Options', 'nosniff');
+        $xssResp->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $this->assertEquals('alert(1)Paracetamol Seguro 500mg', $med->fresh()->nombre_comercial);
+        $this->assertEquals('Paracetamol', $med->fresh()->principio_activo);
+    }
 }

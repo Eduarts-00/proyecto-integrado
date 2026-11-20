@@ -22,7 +22,7 @@ class InventoryController extends Controller
         if (! in_array($ubicacion, ['VITRINA', 'BODEGA', 'TODOS', 'BAJAS', 'CATALOGO'], true)) {
             $ubicacion = 'VITRINA';
         }
-        $search = trim((string) $request->query('q', ''));
+        $search = substr(trim((string) $request->query('q', '')), 0, 120);
 
         $query = Batch::with('medicamento')
             ->where('cantidad', '>', 0);
@@ -33,7 +33,6 @@ class InventoryController extends Controller
                     ->orWhereDate('fecha_vencimiento', '<=', now()->toDateString());
             })->orderByDesc('fecha_baja')->orderBy('fecha_vencimiento', 'asc');
         } else {
-            // En Vitrina, Bodega y Todos los Lotes solo se exhiben los lotes activos (no dados de baja por caducidad/merma)
             $query->where('activo', true)
                 ->orderBy('fecha_vencimiento', 'asc')
                 ->orderBy('id_lote', 'asc');
@@ -92,7 +91,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Registra una nueva remesa física de lote (HU-04).
+     * Registra una nueva remesa física de lote delegando a la Capa de Servicio Transaccional (HU-04).
      */
     public function registerBatch(Request $request)
     {
@@ -101,28 +100,25 @@ class InventoryController extends Controller
         }
 
         $data = $request->validate([
-            'id_medicamento' => ['required', 'integer', 'exists:medicamentos,id_medicamento'],
+            'id_medicamento' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
             'lote_codigo' => ['required', 'string', 'max:60'],
             'ubicacion' => ['required', 'in:BODEGA,VITRINA'],
-            'cantidad' => ['required', 'integer', 'min:1'],
-            'fecha_vencimiento' => ['required', 'date', 'after:today'],
+            'cantidad' => ['required', 'integer', 'min:1', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
+            'fecha_vencimiento' => ['required', 'date', 'after:today', 'before:2100-01-01'],
         ]);
 
-        $batch = Batch::create([
-            'id_medicamento' => $data['id_medicamento'],
-            'lote_codigo' => strtoupper(trim($data['lote_codigo'])),
-            'ubicacion' => $data['ubicacion'],
-            'cantidad' => $data['cantidad'],
-            'fecha_vencimiento' => $data['fecha_vencimiento'],
-            'fecha_ingreso' => now()->toDateString(),
-        ]);
+        try {
+            $batch = $this->inventoryService->registerBatch($data);
 
-        if ($request->expectsJson()) {
-            return response()->json(['data' => $batch], 201);
+            if ($request->expectsJson()) {
+                return response()->json(['data' => $batch], 201);
+            }
+
+            return redirect()->route('inventario.index', ['ubicacion' => $data['ubicacion']])
+                ->with('success', "Remesa {$batch->lote_codigo} registrada correctamente en {$batch->ubicacion} bajo ordenamiento FEFO.");
+        } catch (RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
-
-        return redirect()->route('inventario.index', ['ubicacion' => $data['ubicacion']])
-            ->with('success', "Remesa {$batch->lote_codigo} registrada correctamente en {$batch->ubicacion} bajo ordenamiento FEFO.");
     }
 
     /**
@@ -135,8 +131,8 @@ class InventoryController extends Controller
         }
 
         $data = $request->validate([
-            'id_lote' => ['required', 'integer', 'exists:inventario_lotes,id_lote'],
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'id_lote' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:inventario_lotes,id_lote'],
+            'cantidad' => ['required', 'integer', 'min:1', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
         ]);
 
         try {
@@ -153,7 +149,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Retira o devuelve unidades desde Vitrina hacia Bodega (por sobrestock, retiro preventivo FEFO o custodia Q.F.).
+     * Retira o devuelve unidades desde Vitrina hacia Bodega.
      */
     public function transferToStorage(Request $request)
     {
@@ -163,8 +159,8 @@ class InventoryController extends Controller
         }
 
         $data = $request->validate([
-            'id_lote' => ['required', 'integer', 'exists:inventario_lotes,id_lote'],
-            'cantidad' => ['required', 'integer', 'min:1'],
+            'id_lote' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:inventario_lotes,id_lote'],
+            'cantidad' => ['required', 'integer', 'min:1', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
             'motivo' => ['nullable', 'string', 'max:150'],
         ]);
 
@@ -193,8 +189,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Da de baja sanitaria un lote (por caducidad/vencimiento FEFO, merma o alerta ISP)
-     * retirándolo de Vitrina/Bodega activa hacia la bandeja de Bajas y Caducados, o lo rehabilita.
+     * Da de baja sanitaria un lote o lo rehabilita a través de la Capa de Servicio.
      */
     public function toggleBatchStatus(Request $request, int $idLote)
     {
@@ -203,25 +198,14 @@ class InventoryController extends Controller
             abort(403, 'Solo Bodega, Químico Farmacéutico o Administración pueden dar de baja o rehabilitar un lote.');
         }
 
-        $lote = Batch::with('medicamento')->findOrFail($idLote);
-        $nuevoActivo = ! $lote->activo;
+        $request->validate([
+            'motivo_baja' => ['nullable', 'string', 'max:150'],
+        ]);
 
-        if (! $nuevoActivo) {
-            $motivoPorDefecto = $lote->dias_restantes <= 30
-                ? 'Vencimiento / Producto Caducado'
-                : 'Merma / Rotura o Deterioro de Envase';
-            $motivo = trim((string) $request->input('motivo_baja', $motivoPorDefecto));
-
-            $lote->activo = false;
-            $lote->motivo_baja = $motivo !== '' ? $motivo : $motivoPorDefecto;
-            $lote->fecha_baja = now();
-            $lote->save();
-        } else {
-            $lote->activo = true;
-            $lote->motivo_baja = null;
-            $lote->fecha_baja = null;
-            $lote->save();
-        }
+        $lote = $this->inventoryService->toggleBatchStatus(
+            $idLote,
+            $request->has('motivo_baja') ? (string) $request->input('motivo_baja') : null
+        );
 
         $evento = $lote->activo ? 'HABILITACION_LOTE_INVENTARIO' : 'BAJA_SANITARIA_POR_CADUCIDAD';
 
@@ -242,7 +226,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Registra un nuevo medicamento adquirido en el catálogo (con su condición de receta y lote opcional).
+     * Registra un nuevo medicamento adquirido en el catálogo delegando en InventoryService.
      */
     public function storeMedication(Request $request)
     {
@@ -256,59 +240,37 @@ class InventoryController extends Controller
             'principio_activo' => ['required', 'string', 'max:150'],
             'laboratorio' => ['required', 'string', 'max:100'],
             'categoria' => ['nullable', 'string', 'max:80'],
-            'precio_unitario' => ['required', 'numeric', 'min:1'],
+            'precio_unitario' => ['required', 'numeric', 'min:1', 'max:' . InventoryService::MAX_PRECIO_UNITARIO],
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
-            'cantidad_inicial' => ['nullable', 'integer', 'min:0'],
+            'cantidad_inicial' => ['nullable', 'integer', 'min:0', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
             'lote_codigo' => ['nullable', 'string', 'max:60'],
             'ubicacion_inicial' => ['nullable', 'in:BODEGA,VITRINA'],
-            'fecha_vencimiento' => ['nullable', 'date', 'after:today'],
+            'fecha_vencimiento' => ['nullable', 'date', 'after:today', 'before:2100-01-01'],
         ]);
 
-        $esRestringido = $data['condicion_receta'] === 'receta_retenida';
-        $categoria = ! empty($data['categoria'])
-            ? trim($data['categoria'])
-            : ($esRestringido ? 'Controlado (Receta Retenida ISP)' : 'Venta Directa');
+        try {
+            $medicamento = $this->inventoryService->createMedicationWithInitialBatch($data);
+            $esRestringido = $medicamento->requiere_receta || $medicamento->tipo_controlado;
+            $cantidadInicial = (int) ($data['cantidad_inicial'] ?? 0);
 
-        $medicamento = Medication::create([
-            'codigo_barras' => trim($data['codigo_barras']),
-            'nombre_comercial' => trim($data['nombre_comercial']),
-            'principio_activo' => trim($data['principio_activo']),
-            'laboratorio' => trim($data['laboratorio']),
-            'categoria' => $categoria,
-            'precio_unitario' => (float) $data['precio_unitario'],
-            'requiere_receta' => $esRestringido,
-            'tipo_controlado' => $esRestringido,
-            'activo' => true,
-        ]);
-
-        $cantidadInicial = (int) ($data['cantidad_inicial'] ?? 0);
-        if ($cantidadInicial > 0 && ! empty($data['lote_codigo']) && ! empty($data['fecha_vencimiento'])) {
-            Batch::create([
+            $this->auditLogService->recordSecurityEvent('ADQUISICION_NUEVO_MEDICAMENTO', [
                 'id_medicamento' => $medicamento->id_medicamento,
-                'lote_codigo' => strtoupper(trim($data['lote_codigo'])),
-                'ubicacion' => $data['ubicacion_inicial'] ?? 'BODEGA',
-                'cantidad' => $cantidadInicial,
-                'fecha_vencimiento' => $data['fecha_vencimiento'],
-                'fecha_ingreso' => now()->toDateString(),
-                'activo' => true,
-            ]);
+                'nombre_comercial' => $medicamento->nombre_comercial,
+                'receta_retenida' => $esRestringido,
+                'cantidad_inicial' => $cantidadInicial,
+            ], $request->user());
+
+            $tipoMsg = $esRestringido ? 'con Receta Retenida (Controlado ISP)' : 'de Venta Directa';
+
+            return redirect()->route('inventario.index', ['ubicacion' => 'CATALOGO'])
+                ->with('success', "Medicamento '{$medicamento->nombre_comercial}' ({$tipoMsg}) añadido exitosamente al catálogo.");
+        } catch (RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
-
-        $this->auditLogService->recordSecurityEvent('ADQUISICION_NUEVO_MEDICAMENTO', [
-            'id_medicamento' => $medicamento->id_medicamento,
-            'nombre_comercial' => $medicamento->nombre_comercial,
-            'receta_retenida' => $esRestringido,
-            'cantidad_inicial' => $cantidadInicial,
-        ], $request->user());
-
-        $tipoMsg = $esRestringido ? 'con Receta Retenida (Controlado ISP)' : 'de Venta Directa';
-
-        return redirect()->route('inventario.index', ['ubicacion' => 'CATALOGO'])
-            ->with('success', "Medicamento '{$medicamento->nombre_comercial}' ({$tipoMsg}) añadido exitosamente al catálogo.");
     }
 
     /**
-     * Actualiza los datos de un medicamento y su condición de receta restringida.
+     * Actualiza los datos de un medicamento y su condición de receta restringida a través de InventoryService.
      */
     public function updateMedication(Request $request, int $idMedicamento)
     {
@@ -316,40 +278,32 @@ class InventoryController extends Controller
             abort(403, 'No tiene permisos para editar medicamentos del catálogo.');
         }
 
-        $medicamento = Medication::findOrFail($idMedicamento);
-
         $data = $request->validate([
             'nombre_comercial' => ['required', 'string', 'max:150'],
             'principio_activo' => ['required', 'string', 'max:150'],
             'laboratorio' => ['required', 'string', 'max:100'],
             'categoria' => ['nullable', 'string', 'max:80'],
-            'precio_unitario' => ['required', 'numeric', 'min:1'],
+            'precio_unitario' => ['required', 'numeric', 'min:1', 'max:' . InventoryService::MAX_PRECIO_UNITARIO],
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
             'activo' => ['required', 'boolean'],
         ]);
 
-        $esRestringido = $data['condicion_receta'] === 'receta_retenida';
+        try {
+            $medicamento = $this->inventoryService->updateMedication($idMedicamento, $data);
+            $esRestringido = $medicamento->requiere_receta || $medicamento->tipo_controlado;
 
-        $medicamento->update([
-            'nombre_comercial' => trim($data['nombre_comercial']),
-            'principio_activo' => trim($data['principio_activo']),
-            'laboratorio' => trim($data['laboratorio']),
-            'categoria' => ! empty($data['categoria']) ? trim($data['categoria']) : $medicamento->categoria,
-            'precio_unitario' => (float) $data['precio_unitario'],
-            'requiere_receta' => $esRestringido,
-            'tipo_controlado' => $esRestringido,
-            'activo' => (bool) $data['activo'],
-        ]);
+            $this->auditLogService->recordSecurityEvent('ACTUALIZACION_MEDICAMENTO_CATALOGO', [
+                'id_medicamento' => $medicamento->id_medicamento,
+                'nombre_comercial' => $medicamento->nombre_comercial,
+                'receta_retenida' => $esRestringido,
+                'activo' => $medicamento->activo,
+            ], $request->user());
 
-        $this->auditLogService->recordSecurityEvent('ACTUALIZACION_MEDICAMENTO_CATALOGO', [
-            'id_medicamento' => $medicamento->id_medicamento,
-            'nombre_comercial' => $medicamento->nombre_comercial,
-            'receta_retenida' => $esRestringido,
-            'activo' => $medicamento->activo,
-        ], $request->user());
-
-        return redirect()->route('inventario.index', ['ubicacion' => 'CATALOGO'])
-            ->with('success', "Medicamento '{$medicamento->nombre_comercial}' actualizado correctamente.");
+            return redirect()->route('inventario.index', ['ubicacion' => 'CATALOGO'])
+                ->with('success', "Medicamento '{$medicamento->nombre_comercial}' actualizado correctamente.");
+        } catch (RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
     }
 
     /**
@@ -361,13 +315,8 @@ class InventoryController extends Controller
             abort(403, 'No tiene permisos para modificar la restricción de receta.');
         }
 
-        $medicamento = Medication::findOrFail($idMedicamento);
-        $nuevoEstadoControlado = ! ($medicamento->requiere_receta || $medicamento->tipo_controlado);
-
-        $medicamento->update([
-            'requiere_receta' => $nuevoEstadoControlado,
-            'tipo_controlado' => $nuevoEstadoControlado,
-        ]);
+        $medicamento = $this->inventoryService->togglePrescriptionRestriction($idMedicamento);
+        $nuevoEstadoControlado = (bool) ($medicamento->requiere_receta || $medicamento->tipo_controlado);
 
         $this->auditLogService->recordSecurityEvent('CAMBIO_RESTRICCION_RECETA_ISP', [
             'id_medicamento' => $medicamento->id_medicamento,

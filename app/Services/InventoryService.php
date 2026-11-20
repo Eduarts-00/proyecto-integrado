@@ -3,13 +3,22 @@
 namespace App\Services;
 
 use App\Models\Batch;
+use App\Models\Medication;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
+/**
+ * Capa de Servicio de Dominio y Persistencia de Inventario.
+ * Separa y aísla todas las lecturas/escrituras de Base de Datos respecto del Frontend y Controladores HTTP.
+ */
 class InventoryService
 {
+    public const MAX_PRECIO_UNITARIO = 9999999;
+
+    public const MAX_CANTIDAD_LOTE = 100000;
+
     /**
      * Retorna el lote disponible con fecha de vencimiento más próxima (FEFO).
      * Emplea lockForUpdate() cuando se invoca dentro de una transacción ACID (CP-01 / CP-05).
@@ -44,8 +53,8 @@ class InventoryService
         int $cantidadRequerida,
         string $ubicacion = 'VITRINA'
     ): array {
-        if ($cantidadRequerida <= 0) {
-            throw new RuntimeException('La cantidad requerida debe ser mayor a cero.', 422);
+        if ($cantidadRequerida <= 0 || $cantidadRequerida > self::MAX_CANTIDAD_LOTE) {
+            throw new RuntimeException('La cantidad requerida está fuera del rango operativo permitido.', 422);
         }
 
         $lotesVigentes = Batch::query()
@@ -88,10 +97,39 @@ class InventoryService
     }
 
     /**
+     * Registra una nueva remesa física de lote en Bodega o Vitrina bajo transacción ACID.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function registerBatch(array $data): Batch
+    {
+        $cantidad = (int) ($data['cantidad'] ?? 0);
+        if ($cantidad < 1 || $cantidad > self::MAX_CANTIDAD_LOTE) {
+            throw new RuntimeException('La cantidad del lote excede los límites permitidos (1 a 100.000 unidades).', 422);
+        }
+
+        return DB::transaction(function () use ($data, $cantidad) {
+            return Batch::create([
+                'id_medicamento' => (int) $data['id_medicamento'],
+                'lote_codigo' => strtoupper(trim((string) $data['lote_codigo'])),
+                'ubicacion' => (string) $data['ubicacion'],
+                'cantidad' => $cantidad,
+                'fecha_vencimiento' => (string) $data['fecha_vencimiento'],
+                'fecha_ingreso' => now()->toDateString(),
+                'activo' => true,
+            ]);
+        });
+    }
+
+    /**
      * Traspasa unidades desde un lote en BODEGA hacia VITRINA validando que no esté vencido.
      */
     public function transferToDisplay(int $idLoteBodega, int $cantidad): Batch
     {
+        if ($cantidad <= 0 || $cantidad > self::MAX_CANTIDAD_LOTE) {
+            throw new RuntimeException('Cantidad de traspaso fuera del rango permitido.', 422);
+        }
+
         return DB::transaction(function () use ($idLoteBodega, $cantidad) {
             $loteBodega = Batch::query()
                 ->where('id_lote', $idLoteBodega)
@@ -104,7 +142,7 @@ class InventoryService
                 throw new RuntimeException('Bloqueo sanitario: No se puede traspasar a vitrina un lote vencido.', 422);
             }
 
-            if ($loteBodega->cantidad < $cantidad || $cantidad <= 0) {
+            if ($loteBodega->cantidad < $cantidad) {
                 throw new RuntimeException('Cantidad de traspaso inválida o superior al stock en bodega.', 409);
             }
 
@@ -137,11 +175,14 @@ class InventoryService
     }
 
     /**
-     * Retira o devuelve unidades desde un lote en VITRINA hacia BODEGA
-     * (por sobrestock, reorganización de mesón, custodia Q.F. o retiro preventivo FEFO).
+     * Retira o devuelve unidades desde un lote en VITRINA hacia BODEGA.
      */
     public function transferToStorage(int $idLoteVitrina, int $cantidad): Batch
     {
+        if ($cantidad <= 0 || $cantidad > self::MAX_CANTIDAD_LOTE) {
+            throw new RuntimeException('Cantidad a retirar fuera del rango permitido.', 422);
+        }
+
         return DB::transaction(function () use ($idLoteVitrina, $cantidad) {
             $loteVitrina = Batch::query()
                 ->where('id_lote', $idLoteVitrina)
@@ -149,7 +190,7 @@ class InventoryService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($loteVitrina->cantidad < $cantidad || $cantidad <= 0) {
+            if ($loteVitrina->cantidad < $cantidad) {
                 throw new RuntimeException('Cantidad a retirar inválida o superior al stock disponible en Vitrina.', 409);
             }
 
@@ -179,6 +220,132 @@ class InventoryService
                 'fecha_ingreso' => Carbon::today()->toDateString(),
                 'activo' => $loteVitrina->activo,
             ]);
+        });
+    }
+
+    /**
+     * Da de baja sanitaria un lote o lo rehabilita dentro de una transacción segura.
+     */
+    public function toggleBatchStatus(int $idLote, ?string $motivoInput = null): Batch
+    {
+        return DB::transaction(function () use ($idLote, $motivoInput) {
+            $lote = Batch::with('medicamento')->lockForUpdate()->findOrFail($idLote);
+            $nuevoActivo = ! $lote->activo;
+
+            if (! $nuevoActivo) {
+                $motivoPorDefecto = $lote->dias_restantes <= 30
+                    ? 'Vencimiento / Producto Caducado'
+                    : 'Merma / Rotura o Deterioro de Envase';
+                $motivo = trim((string) ($motivoInput ?? $motivoPorDefecto));
+
+                $lote->activo = false;
+                $lote->motivo_baja = $motivo !== '' ? $motivo : $motivoPorDefecto;
+                $lote->fecha_baja = now();
+            } else {
+                $lote->activo = true;
+                $lote->motivo_baja = null;
+                $lote->fecha_baja = null;
+            }
+
+            $lote->save();
+
+            return $lote;
+        });
+    }
+
+    /**
+     * Crea un medicamento en el catálogo (y su lote inicial opcional) validando cotas de dominio.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createMedicationWithInitialBatch(array $data): Medication
+    {
+        $precio = (float) ($data['precio_unitario'] ?? 0);
+        if ($precio < 1 || $precio > self::MAX_PRECIO_UNITARIO) {
+            throw new RuntimeException('El precio unitario está fuera del rango permitido ($1 a $9.999.999 CLP).', 422);
+        }
+
+        return DB::transaction(function () use ($data, $precio) {
+            $esRestringido = ($data['condicion_receta'] ?? '') === 'receta_retenida';
+            $categoria = ! empty($data['categoria'])
+                ? trim((string) $data['categoria'])
+                : ($esRestringido ? 'Controlado (Receta Retenida ISP)' : 'Venta Directa');
+
+            $medicamento = Medication::create([
+                'codigo_barras' => trim((string) $data['codigo_barras']),
+                'nombre_comercial' => trim((string) $data['nombre_comercial']),
+                'principio_activo' => trim((string) $data['principio_activo']),
+                'laboratorio' => trim((string) $data['laboratorio']),
+                'categoria' => $categoria,
+                'precio_unitario' => round($precio, 2),
+                'requiere_receta' => $esRestringido,
+                'tipo_controlado' => $esRestringido,
+                'activo' => true,
+            ]);
+
+            $cantidadInicial = min(self::MAX_CANTIDAD_LOTE, max(0, (int) ($data['cantidad_inicial'] ?? 0)));
+            if ($cantidadInicial > 0 && ! empty($data['lote_codigo']) && ! empty($data['fecha_vencimiento'])) {
+                Batch::create([
+                    'id_medicamento' => $medicamento->id_medicamento,
+                    'lote_codigo' => strtoupper(trim((string) $data['lote_codigo'])),
+                    'ubicacion' => (string) ($data['ubicacion_inicial'] ?? 'BODEGA'),
+                    'cantidad' => $cantidadInicial,
+                    'fecha_vencimiento' => (string) $data['fecha_vencimiento'],
+                    'fecha_ingreso' => now()->toDateString(),
+                    'activo' => true,
+                ]);
+            }
+
+            return $medicamento;
+        });
+    }
+
+    /**
+     * Actualiza un medicamento existente garantizando límites de columna DECIMAL(10,2) y aislamiento transaccional.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateMedication(int $idMedicamento, array $data): Medication
+    {
+        $precio = (float) ($data['precio_unitario'] ?? 0);
+        if ($precio < 1 || $precio > self::MAX_PRECIO_UNITARIO) {
+            throw new RuntimeException('El precio unitario está fuera del rango permitido ($1 a $9.999.999 CLP).', 422);
+        }
+
+        return DB::transaction(function () use ($idMedicamento, $data, $precio) {
+            $medicamento = Medication::lockForUpdate()->findOrFail($idMedicamento);
+            $esRestringido = ($data['condicion_receta'] ?? '') === 'receta_retenida';
+
+            $medicamento->update([
+                'nombre_comercial' => trim((string) $data['nombre_comercial']),
+                'principio_activo' => trim((string) $data['principio_activo']),
+                'laboratorio' => trim((string) $data['laboratorio']),
+                'categoria' => ! empty($data['categoria']) ? trim((string) $data['categoria']) : $medicamento->categoria,
+                'precio_unitario' => round($precio, 2),
+                'requiere_receta' => $esRestringido,
+                'tipo_controlado' => $esRestringido,
+                'activo' => (bool) $data['activo'],
+            ]);
+
+            return $medicamento;
+        });
+    }
+
+    /**
+     * Alterna la condición de venta restringida (Receta Retenida ISP vs. Venta Libre).
+     */
+    public function togglePrescriptionRestriction(int $idMedicamento): Medication
+    {
+        return DB::transaction(function () use ($idMedicamento) {
+            $medicamento = Medication::lockForUpdate()->findOrFail($idMedicamento);
+            $nuevoEstadoControlado = ! ($medicamento->requiere_receta || $medicamento->tipo_controlado);
+
+            $medicamento->update([
+                'requiere_receta' => $nuevoEstadoControlado,
+                'tipo_controlado' => $nuevoEstadoControlado,
+            ]);
+
+            return $medicamento;
         });
     }
 
