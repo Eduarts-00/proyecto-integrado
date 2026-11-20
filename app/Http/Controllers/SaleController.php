@@ -314,9 +314,9 @@ class SaleController extends Controller
     {
         $data = $request->validate([
             'id_medicamento' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
-            'rut_paciente' => ['required', 'string', 'max:15'],
-            'rut_medico' => ['required', 'string', 'max:15'],
-            'folio_receta' => ['required', 'string', 'max:60'],
+            'rut_paciente' => ['required', 'string', 'min:8', 'max:15'],
+            'rut_medico' => ['required', 'string', 'min:8', 'max:15'],
+            'folio_receta' => ['required', 'string', 'min:4', 'max:30', 'regex:/^[A-Za-z0-9\-_]+$/'],
         ]);
 
         $med = Medication::findOrFail($data['id_medicamento']);

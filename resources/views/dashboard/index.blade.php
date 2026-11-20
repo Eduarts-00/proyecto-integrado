@@ -100,6 +100,7 @@
             <div class="md:col-span-2">
                 <label for="exp-desde" class="block text-[11px] font-bold text-slate-600 mb-1">Desde (Opcional)</label>
                 <input type="date" id="exp-desde" name="fecha_desde"
+                       min="2020-01-01" max="{{ now()->toDateString() }}"
                        class="w-full px-2.5 py-2 rounded-lg border border-slate-300 bg-white font-mono-code text-slate-700 focus:border-[#1E40AF] outline-none">
             </div>
 
@@ -107,6 +108,7 @@
             <div class="md:col-span-2">
                 <label for="exp-hasta" class="block text-[11px] font-bold text-slate-600 mb-1">Hasta (Opcional)</label>
                 <input type="date" id="exp-hasta" name="fecha_hasta"
+                       min="2020-01-01" max="{{ now()->toDateString() }}"
                        class="w-full px-2.5 py-2 rounded-lg border border-slate-300 bg-white font-mono-code text-slate-700 focus:border-[#1E40AF] outline-none">
             </div>
 
@@ -190,7 +192,7 @@
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Valorización de Inventario</span>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                    {{ number_format($stockVitrinaUnidades + $stockBodegaUnidades, 0, ',', '.') }} u. totales
+                    {{ $totalMedicamentosActivos ?? 77 }} prod. • {{ $totalLotesActivos ?? 145 }} lotes ({{ number_format($stockVitrinaUnidades + $stockBodegaUnidades, 0, ',', '.') }} u.)
                 </span>
             </div>
             <div class="text-2xl font-extrabold text-slate-900 font-mono-code">
@@ -414,6 +416,89 @@
                     @empty
                         <tr>
                             <td colspan="9" class="py-8 text-center text-slate-400 text-xs">No hay boletas registradas en este período.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ÚLTIMAS COMPRAS Y ABASTECIMIENTO DE INVENTARIO (INGRESOS DE LOTES)        -->
+    <!-- ========================================================================= -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">Últimas Compras y Abastecimiento de Inventario (Ingresos de Lotes y Catálogo)</h2>
+                <p class="text-[11px] text-slate-500">Registro en tiempo real de adquisiciones de medicamentos y nuevas remesas ingresadas a Bodega o Vitrina.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}"
+                   class="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E40AF] text-[11px] font-bold transition">
+                    + Ingresar Lote / Compra
+                </a>
+                <a href="{{ route('dashboard.export.excel', ['tipo' => 'inventario']) }}"
+                   class="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold transition">
+                    Descargar Inventario (.xlsx)
+                </a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200 text-[10px] font-bold uppercase text-slate-400 bg-slate-50/70 whitespace-nowrap">
+                        <th class="py-3 px-4">Código Lote</th>
+                        <th class="py-3 px-4">Fecha Ingreso</th>
+                        <th class="py-3 px-4">Medicamento / Principio Activo</th>
+                        <th class="py-3 px-4">Laboratorio</th>
+                        <th class="py-3 px-4 text-center">Ubicación</th>
+                        <th class="py-3 px-4 text-center">Unidades</th>
+                        <th class="py-3 px-4 text-right">Precio Unit.</th>
+                        <th class="py-3 px-4 text-right">Valorización Lote</th>
+                        <th class="py-3 px-4 text-center">Vencimiento FEFO</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    @forelse($ultimasComprasLotes ?? [] as $loteCompra)
+                        @php
+                            $medCompra = $loteCompra->medicamento;
+                            $precioU = (int) round($medCompra?->precio_unitario ?? 0);
+                            $valLote = $precioU * (int) $loteCompra->cantidad;
+                        @endphp
+                        <tr class="hover:bg-slate-50/80">
+                            <td class="py-3 px-4 font-mono-code font-bold text-slate-800 whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">{{ $loteCompra->lote_codigo }}</span>
+                            </td>
+                            <td class="py-3 px-4 font-mono-code text-[11px] text-slate-500 whitespace-nowrap">
+                                {{ $loteCompra->fecha_ingreso?->format('d-m-Y') ?? now()->format('d-m-Y') }}
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="font-bold text-slate-900">{{ $medCompra?->nombre_comercial ?? 'Medicamento' }}</div>
+                                <div class="text-[11px] text-slate-400">{{ $medCompra?->principio_activo }}</div>
+                            </td>
+                            <td class="py-3 px-4 text-slate-600 whitespace-nowrap">{{ $medCompra?->laboratorio }}</td>
+                            <td class="py-3 px-4 text-center whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ $loteCompra->ubicacion === 'VITRINA' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-300' }}">
+                                    {{ $loteCompra->ubicacion }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-center font-mono-code font-bold text-slate-900 whitespace-nowrap">
+                                {{ number_format($loteCompra->cantidad, 0, ',', '.') }} u.
+                            </td>
+                            <td class="py-3 px-4 text-right font-mono-code text-slate-600 whitespace-nowrap">
+                                ${{ number_format($precioU, 0, ',', '.') }}
+                            </td>
+                            <td class="py-3 px-4 text-right font-mono-code font-extrabold text-emerald-700 whitespace-nowrap">
+                                ${{ number_format($valLote, 0, ',', '.') }}
+                            </td>
+                            <td class="py-3 px-4 text-center font-mono-code text-[11px] text-slate-600 whitespace-nowrap">
+                                {{ $loteCompra->fecha_vencimiento?->format('d-m-Y') }} ({{ $loteCompra->dias_restantes }}d)
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="9" class="py-8 text-center text-slate-400 text-xs">No hay registros de abastecimiento recientes.</td>
                         </tr>
                     @endforelse
                 </tbody>

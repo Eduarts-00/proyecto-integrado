@@ -545,13 +545,15 @@
                 @csrf
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
+                        <label class="block font-bold text-slate-700 mb-1">Nombre Comercial (3 a 100 caract.)</label>
                         <input type="text" name="nombre_comercial" required placeholder="Ej: Zolpidem 10mg"
+                               minlength="3" maxlength="100"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
+                        <label class="block font-bold text-slate-700 mb-1">Principio Activo (3 a 100 caract.)</label>
                         <input type="text" name="principio_activo" required placeholder="Ej: Zolpidem Tartrato"
+                               minlength="3" maxlength="100"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                 </div>
@@ -560,11 +562,13 @@
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Código de Barras</label>
                         <input type="text" name="codigo_barras" value="78000010{{ rand(1120, 9999) }}" required
+                               minlength="6" maxlength="20"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
                         <input type="text" name="laboratorio" required placeholder="Ej: Laboratorio Saval"
+                               minlength="2" maxlength="80"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                     <div>
@@ -593,6 +597,7 @@
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-1">Código Lote</label>
                             <input type="text" name="lote_codigo" value="LOT-2026-{{ rand(300, 999) }}"
+                                   minlength="4" maxlength="25"
                                    class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono-code">
                         </div>
                         <div>
@@ -605,6 +610,7 @@
                         <div>
                             <label class="block text-[11px] text-slate-500 mb-1">Vencimiento</label>
                             <input type="date" name="fecha_vencimiento" value="{{ now()->addMonths(8)->toDateString() }}"
+                                   min="{{ now()->addDay()->toDateString() }}" max="{{ now()->addYears(10)->toDateString() }}"
                                    class="w-full px-2 py-1.5 rounded-lg border border-slate-300 font-mono-code">
                         </div>
                     </div>
@@ -632,19 +638,22 @@
                 @csrf
                 @method('PUT')
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre Comercial (3 a 100 caract.)</label>
                     <input type="text" id="edit-med-nombre" name="nombre_comercial" required
+                           minlength="3" maxlength="100"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
+                        <label class="block font-bold text-slate-700 mb-1">Principio Activo (3 a 100 caract.)</label>
                         <input type="text" id="edit-med-principio" name="principio_activo" required
+                               minlength="3" maxlength="100"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
+                        <label class="block font-bold text-slate-700 mb-1">Laboratorio (2 a 80 caract.)</label>
                         <input type="text" id="edit-med-laboratorio" name="laboratorio" required
+                               minlength="2" maxlength="80"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                 </div>
@@ -957,6 +966,7 @@
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Código de Lote</label>
                         <input type="text" name="lote_codigo" value="LOT-2026-{{ rand(300, 999) }}" required
+                               minlength="4" maxlength="25"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
@@ -970,12 +980,13 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Cantidad Unidades</label>
-                        <input type="number" name="cantidad" min="1" value="100" required
+                        <input type="number" name="cantidad" min="1" max="100000" value="100" required
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Fecha Vencimiento</label>
                         <input type="date" name="fecha_vencimiento" value="{{ now()->addMonths(6)->toDateString() }}" required
+                               min="{{ now()->addDay()->toDateString() }}" max="{{ now()->addYears(10)->toDateString() }}"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                 </div>

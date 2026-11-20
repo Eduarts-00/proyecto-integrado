@@ -109,11 +109,13 @@
                                 <div>
                                     <label class="block font-bold text-slate-700 mb-1">RUN del Paciente</label>
                                     <input type="text" name="rut_paciente" value="{{ $selectedValidation->rut_paciente }}" required
+                                           minlength="8" maxlength="12"
                                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono-code focus:border-[#1E40AF] outline-none">
                                 </div>
                                 <div>
                                     <label class="block font-bold text-slate-700 mb-1">RUN del Médico Prescriptor</label>
                                     <input type="text" name="rut_medico" value="{{ $selectedValidation->rut_medico }}" required
+                                           minlength="8" maxlength="12"
                                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono-code focus:border-[#1E40AF] outline-none">
                                 </div>
                             </div>
@@ -122,11 +124,13 @@
                                 <div>
                                     <label class="block font-bold text-slate-700 mb-1">Folio de Receta Retenida</label>
                                     <input type="text" name="folio_receta" value="{{ $selectedValidation->folio_receta }}" required
+                                           minlength="4" maxlength="25"
                                            class="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono-code focus:border-[#1E40AF] outline-none">
                                 </div>
                                 <div>
                                     <label class="block font-bold text-[#EF4444] mb-1">PIN de Autorización Q.F.</label>
                                     <input type="password" name="pin_qf" value="4421" required
+                                           minlength="4" maxlength="6"
                                            placeholder="Ingrese su PIN"
                                            class="w-full px-3.5 py-2.5 rounded-lg border-2 border-red-300 bg-red-50/40 font-mono-code font-bold text-center focus:border-[#EF4444] outline-none">
                                 </div>
@@ -142,7 +146,8 @@
 
                         <form action="{{ route('autorizaciones.reject', $selectedValidation->id_registro) }}" method="POST" class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs">
                             @csrf
-                            <input type="text" name="motivo_rechazo" required placeholder="Motivo de rechazo (ej. Receta enmendada o vencida)"
+                            <input type="text" name="motivo_rechazo" required placeholder="Motivo de rechazo (4 a 120 caracteres)"
+                                   minlength="4" maxlength="120"
                                    class="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-xs">
                             <button type="submit" class="px-3.5 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-[#EF4444] font-bold">
                                 ✕ Rechazar Receta

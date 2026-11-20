@@ -102,15 +102,15 @@ class DashboardController extends Controller
         $ispPendientesCount = IspLog::where('estado', 'PENDIENTE')->count();
         $ispRechazadasCount = IspLog::where('estado', 'RECHAZADO')->count();
 
-        // Tendencia últimos 7 días (montos reales o referencia histórica del local)
+        // Tendencia últimos 7 días (montos reales de base de datos + referencia histórica de días previos)
         $diasLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
         $tendenciaSemanal = [];
         $referenciaHistorica = [420000, 510000, 480000, 690000, 610000, 790000, 834000];
         for ($i = 6; $i >= 0; $i--) {
             $fecha = now()->subDays($i);
-            $ventasFecha = Sale::whereDate('fecha_venta', $fecha->toDateString());
-            $montoReal = (float) $ventasFecha->sum('total');
-            $boletasFecha = (int) $ventasFecha->count();
+            $fechaStr = $fecha->toDateString();
+            $montoReal = (float) Sale::whereDate('fecha_venta', $fechaStr)->sum('total');
+            $boletasFecha = (int) Sale::whereDate('fecha_venta', $fechaStr)->count();
             $montoFinal = $montoReal > 0 ? $montoReal : (float) ($referenciaHistorica[6 - $i] ?? 500000);
 
             $tendenciaSemanal[] = [
@@ -122,27 +122,49 @@ class DashboardController extends Controller
             ];
         }
 
-        // Pareto de medicamentos de mayor rotación real (Unidades + Ingresos CLP)
+        $ventasIds = $ventasPeriodo->pluck('id_venta');
+
+        // Pareto de medicamentos de mayor rotación real sincronizado con las ventas del período
         $rotacionReal = SaleDetail::select(
             'id_medicamento',
             DB::raw('SUM(cantidad) as total_unidades'),
             DB::raw('SUM(subtotal_linea) as total_ingresos')
         )
+            ->whereIn('id_venta', $ventasIds)
             ->with('medicamento')
             ->groupBy('id_medicamento')
             ->orderByDesc('total_unidades')
+            ->orderByDesc('total_ingresos')
             ->take(7)
             ->get();
 
-        // Resumen de Convenios de Salud
-        $conveniosResumen = HealthAgreement::withCount('ventas as transacciones_hoy')
-            ->withSum('ventas as descuentos_hoy', 'descuento_total')
-            ->withSum('ventas as neto_hoy', 'total')
+        // Resumen de Convenios de Salud sincronizado con las ventas del período
+        $conveniosResumen = HealthAgreement::withCount(['ventas as transacciones_hoy' => function ($q) use ($ventasIds) {
+            $q->whereIn('id_venta', $ventasIds);
+        }])
+            ->withSum(['ventas as descuentos_hoy' => function ($q) use ($ventasIds) {
+                $q->whereIn('id_venta', $ventasIds);
+            }], 'descuento_total')
+            ->withSum(['ventas as neto_hoy' => function ($q) use ($ventasIds) {
+                $q->whereIn('id_venta', $ventasIds);
+            }], 'total')
             ->where('porcentaje_descuento', '>', 0)
+            ->orderByDesc('neto_hoy')
+            ->orderByDesc('transacciones_hoy')
             ->orderByDesc('porcentaje_descuento')
             ->get();
 
         $ultimasVentas = $ventasPeriodo->take(10);
+
+        // Últimas compras / adquisiciones de medicamentos e ingresos de lotes de stock en Inventario
+        $ultimasComprasLotes = Batch::with('medicamento')
+            ->where('activo', true)
+            ->orderByDesc('id_lote')
+            ->take(8)
+            ->get();
+
+        $totalMedicamentosActivos = $medicamentos->count();
+        $totalLotesActivos = $lotesActivos->count();
 
         return view('dashboard.index', compact(
             'periodo',
@@ -163,6 +185,8 @@ class DashboardController extends Controller
             'valorizacionVitrina',
             'valorizacionBodega',
             'valorizacionTotalInventario',
+            'totalMedicamentosActivos',
+            'totalLotesActivos',
             'alertasFefo',
             'lotesProxVencerCount',
             'valorizacionRiesgoFefo',
@@ -172,20 +196,39 @@ class DashboardController extends Controller
             'tendenciaSemanal',
             'rotacionReal',
             'conveniosResumen',
-            'ultimasVentas'
+            'ultimasVentas',
+            'ultimasComprasLotes'
         ));
     }
 
     /**
-     * Construye el filtro de rango de fechas para exportación PDF y Excel.
+     * Construye y valida estrictamente el filtro de rango de fechas para exportación PDF y Excel.
      *
      * @return array{0: ?Carbon, 1: ?Carbon, 2: string}
      */
     private function resolveExportDateRange(Request $request): array
     {
         $periodo = (string) $request->query('periodo', 'todo');
-        $desdeInput = trim((string) $request->query('fecha_desde', ''));
-        $hastaInput = trim((string) $request->query('fecha_hasta', ''));
+        $rawDesde = trim((string) $request->query('fecha_desde', ''));
+        $rawHasta = trim((string) $request->query('fecha_hasta', ''));
+
+        $isValidDate = function (string $val): bool {
+            if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $val, $m)) {
+                return false;
+            }
+            $year = (int) $m[1];
+            $month = (int) $m[2];
+            $day = (int) $m[3];
+
+            return $year >= 2020 && $year <= 2035 && checkdate($month, $day, $year);
+        };
+
+        $desdeInput = $isValidDate($rawDesde) ? $rawDesde : '';
+        $hastaInput = $isValidDate($rawHasta) ? $rawHasta : '';
+
+        if ($desdeInput !== '' && $hastaInput !== '' && $desdeInput > $hastaInput) {
+            [$desdeInput, $hastaInput] = [$hastaInput, $desdeInput];
+        }
 
         if ($desdeInput !== '' || $hastaInput !== '') {
             $desde = $desdeInput !== '' ? Carbon::parse($desdeInput)->startOfDay() : null;

@@ -28,8 +28,8 @@ class AuthController extends Controller
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'rut' => ['required', 'string'],
-            'password' => ['required', 'string'],
+            'rut' => ['required', 'string', 'min:3', 'max:80'],
+            'password' => ['required', 'string', 'min:4', 'max:64'],
         ]);
 
         $rutInput = strtoupper(trim($credentials['rut']));
@@ -87,7 +87,7 @@ class AuthController extends Controller
     public function validateMFA(Request $request)
     {
         $data = $request->validate([
-            'pin_qf' => ['required', 'string'],
+            'pin_qf' => ['required', 'string', 'min:4', 'max:10'],
         ]);
 
         $qf = User::with('rol')

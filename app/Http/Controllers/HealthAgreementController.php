@@ -15,8 +15,19 @@ class HealthAgreementController extends Controller
     public function index(Request $request)
     {
         $filtroEstado = (string) $request->query('estado', 'todos');
-        $fechaDesde = $request->query('desde');
-        $fechaHasta = $request->query('hasta');
+        $rawDesde = trim((string) $request->query('desde', ''));
+        $rawHasta = trim((string) $request->query('hasta', ''));
+
+        $fechaDesde = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDesde) && $rawDesde >= '2020-01-01' && $rawDesde <= '2035-12-31'
+            ? $rawDesde
+            : null;
+        $fechaHasta = preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawHasta) && $rawHasta >= '2020-01-01' && $rawHasta <= '2035-12-31'
+            ? $rawHasta
+            : null;
+
+        if ($fechaDesde && $fechaHasta && $fechaDesde > $fechaHasta) {
+            [$fechaDesde, $fechaHasta] = [$fechaHasta, $fechaDesde];
+        }
 
         $query = HealthAgreement::with('medicamentos')->orderBy('id_convenio', 'asc');
         $hoy = Carbon::today()->toDateString();
@@ -67,14 +78,15 @@ class HealthAgreementController extends Controller
             abort(403, 'Solo el Administrador General está facultado para agregar nuevos convenios de salud.');
         }
 
+        $maxDate = now()->addYears(5)->toDateString();
         $data = $request->validate([
-            'nombre_convenio' => ['required', 'string', 'max:100'],
+            'nombre_convenio' => ['required', 'string', 'min:3', 'max:80'],
             'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
             'aplica_todo_catalogo' => ['nullable', 'boolean'],
             'medicamentos_ids' => ['nullable', 'array', 'max:500'],
             'medicamentos_ids.*' => ['integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
-            'fecha_inicio' => ['nullable', 'date', 'after:2000-01-01', 'before:2100-01-01'],
-            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio', 'before:2100-01-01'],
+            'fecha_inicio' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:2020-01-01', 'before_or_equal:' . $maxDate],
+            'fecha_fin' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:fecha_inicio', 'before_or_equal:' . $maxDate],
         ]);
 
         $aplicaTodo = isset($data['aplica_todo_catalogo']) ? (bool) $data['aplica_todo_catalogo'] : true;
@@ -116,14 +128,15 @@ class HealthAgreementController extends Controller
             abort(403, 'Solo el Administrador General está facultado para editar convenios de salud.');
         }
 
+        $maxDate = now()->addYears(5)->toDateString();
         $data = $request->validate([
-            'nombre_convenio' => ['required', 'string', 'max:100'],
+            'nombre_convenio' => ['required', 'string', 'min:3', 'max:80'],
             'porcentaje_descuento' => ['required', 'numeric', 'min:0', 'max:100'],
             'aplica_todo_catalogo' => ['nullable', 'boolean'],
             'medicamentos_ids' => ['nullable', 'array', 'max:500'],
             'medicamentos_ids.*' => ['integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
-            'fecha_inicio' => ['nullable', 'date', 'after:2000-01-01', 'before:2100-01-01'],
-            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio', 'before:2100-01-01'],
+            'fecha_inicio' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:2020-01-01', 'before_or_equal:' . $maxDate],
+            'fecha_fin' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:fecha_inicio', 'before_or_equal:' . $maxDate],
             'activo' => ['nullable', 'boolean'],
         ]);
 

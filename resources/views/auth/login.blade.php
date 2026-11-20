@@ -75,6 +75,7 @@
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">👤</span>
                         <input type="text" name="rut" value="{{ old('rut', '12.345.678-5') }}" required
+                               minlength="3" maxlength="80"
                                placeholder="12.345.678-5"
                                class="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-500/20 outline-none">
                     </div>
@@ -85,6 +86,7 @@
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">🔑</span>
                         <input type="password" name="password" value="Password123!" required
+                               minlength="4" maxlength="32"
                                class="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-500/20 outline-none">
                     </div>
                 </div>

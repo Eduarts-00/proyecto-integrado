@@ -267,6 +267,69 @@
                 el.textContent = now.toLocaleTimeString('es-CL');
             }
         }, 1000);
+
+        // Protección Global de Inputs (Límites de Fechas, Números y Caracteres)
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Regular todos los campos de fecha para evitar años de 5 dígitos o fuera de rango
+            document.querySelectorAll('input[type="date"]').forEach(dateInput => {
+                if (!dateInput.getAttribute('min')) {
+                    dateInput.setAttribute('min', '2020-01-01');
+                }
+                if (!dateInput.getAttribute('max')) {
+                    dateInput.setAttribute('max', '2036-12-31');
+                }
+
+                dateInput.addEventListener('change', function() {
+                    const val = this.value;
+                    if (!val) return;
+                    const minVal = this.getAttribute('min') || '2020-01-01';
+                    const maxVal = this.getAttribute('max') || '2036-12-31';
+
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                        this.value = '';
+                        return;
+                    }
+                    if (val < minVal) this.value = minVal;
+                    if (val > maxVal) this.value = maxVal;
+                });
+            });
+
+            // 2. Vincular pares de fechas (Inicio -> Fin / Desde -> Hasta) en el mismo formulario
+            document.querySelectorAll('form').forEach(form => {
+                const startInput = form.querySelector('input[name="fecha_inicio"], input[name="desde"], input[name="fecha_desde"]');
+                const endInput = form.querySelector('input[name="fecha_fin"], input[name="hasta"], input[name="fecha_hasta"]');
+
+                if (startInput && endInput) {
+                    startInput.addEventListener('change', function() {
+                        if (this.value) {
+                            endInput.setAttribute('min', this.value);
+                            if (endInput.value && endInput.value < this.value) {
+                                endInput.value = this.value;
+                            }
+                        }
+                    });
+                    endInput.addEventListener('change', function() {
+                        if (this.value && startInput.value && this.value < startInput.value) {
+                            this.value = startInput.value;
+                        }
+                    });
+                }
+            });
+
+            // 3. Regular campos numéricos para impedir desbordamientos (overflow) al escribir
+            document.querySelectorAll('input[type="number"]').forEach(numInput => {
+                numInput.addEventListener('input', function() {
+                    const maxAttr = this.getAttribute('max');
+                    const minAttr = this.getAttribute('min');
+                    if (maxAttr !== null && this.value !== '' && Number(this.value) > Number(maxAttr)) {
+                        this.value = maxAttr;
+                    }
+                    if (minAttr !== null && this.value !== '' && Number(this.value) < 0 && Number(minAttr) >= 0) {
+                        this.value = minAttr;
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>

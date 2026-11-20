@@ -64,10 +64,10 @@ class IspValidationController extends Controller
     public function authorizePrescription(Request $request, int $idRegistro)
     {
         $data = $request->validate([
-            'rut_paciente' => ['required', 'string', 'max:15'],
-            'rut_medico' => ['required', 'string', 'max:15'],
-            'folio_receta' => ['required', 'string', 'max:60'],
-            'pin_qf' => ['required', 'string', 'max:20'],
+            'rut_paciente' => ['required', 'string', 'min:8', 'max:15'],
+            'rut_medico' => ['required', 'string', 'min:8', 'max:15'],
+            'folio_receta' => ['required', 'string', 'min:4', 'max:30', 'regex:/^[A-Za-z0-9\-_]+$/'],
+            'pin_qf' => ['required', 'string', 'min:4', 'max:10'],
         ]);
 
         $user = $request->user();
@@ -144,7 +144,7 @@ class IspValidationController extends Controller
     public function rejectPrescription(Request $request, int $idRegistro)
     {
         $data = $request->validate([
-            'motivo_rechazo' => ['required', 'string', 'max:255'],
+            'motivo_rechazo' => ['required', 'string', 'min:4', 'max:120'],
         ]);
 
         $user = $request->user();

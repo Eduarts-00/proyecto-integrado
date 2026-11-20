@@ -536,4 +536,74 @@ class ExampleTest extends TestCase
         $this->assertEquals('alert(1)Paracetamol Seguro 500mg', $med->fresh()->nombre_comercial);
         $this->assertEquals('Paracetamol', $med->fresh()->principio_activo);
     }
+
+    /**
+     * Regulación de Caracteres, Fechas y Sincronización Total de Compras/Ventas con el Dashboard:
+     * 1. Rechaza nombres con números o excesivos caracteres, contraseñas > 32 caracteres y fechas absurdas (ej. año 2099 o 99999).
+     * 2. Verifica que toda Compra (ingreso de lote) y toda Venta (checkout POS) se reflejen de inmediato en el Dashboard.
+     */
+    public function test_regulacion_caracteres_fechas_y_sincronizacion_compras_ventas_dashboard(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $admin = User::where('rut', '10.111.222-3')->firstOrFail();
+        $paracetamol = Medication::where('codigo_barras', '780000100104')->firstOrFail();
+
+        // 1. Validación estricta de longitud de nombre, contraseña y formato
+        $badUserResp = $this->actingAs($admin)
+            ->from(route('usuarios.index'))
+            ->post(route('usuarios.store'), [
+                'rut' => '18.455.120-K',
+                'nombre_completo' => 'Usuario12345 Con Numeros Invalidos',
+                'email' => 'test@farmanet.cl',
+                'id_rol' => 1,
+                'password' => str_repeat('A', 40),
+            ]);
+        $badUserResp->assertSessionHasErrors(['nombre_completo', 'password']);
+
+        // 2. Validación estricta de fechas fuera de rango (ej. año 2099 o formato inválido)
+        $badDateResp = $this->actingAs($admin)
+            ->from(route('inventario.index'))
+            ->post(route('inventario.register'), [
+                'id_medicamento' => $paracetamol->id_medicamento,
+                'lote_codigo' => 'LOT-2099-999',
+                'ubicacion' => 'BODEGA',
+                'cantidad' => 50,
+                'fecha_vencimiento' => '2099-12-31',
+            ]);
+        $badDateResp->assertSessionHasErrors(['fecha_vencimiento']);
+
+        // 3. Registrar una Compra / Nuevo Lote válido y verificar que aparezca en el Dashboard
+        $compraResp = $this->actingAs($admin)->post(route('inventario.register'), [
+            'id_medicamento' => $paracetamol->id_medicamento,
+            'lote_codigo' => 'LOT-COMPRA-777',
+            'ubicacion' => 'VITRINA',
+            'cantidad' => 40,
+            'fecha_vencimiento' => now()->addMonths(12)->toDateString(),
+        ]);
+        $compraResp->assertRedirect(route('inventario.index', ['ubicacion' => 'VITRINA']));
+
+        // 4. Registrar una Venta en el POS y verificar que actualice recaudación, boletas y arqueo en el Dashboard
+        $ventasAntes = (float) \App\Models\Sale::sum('total');
+        $boletasAntes = \App\Models\Sale::count();
+
+        $ventaResp = $this->actingAs($admin)->post(route('pos.checkout'), [
+            'items' => [
+                ['id_medicamento' => $paracetamol->id_medicamento, 'cantidad' => 2],
+            ],
+        ]);
+        $ventaResp->assertRedirect(route('pos.index'));
+
+        $ventasDespues = (float) \App\Models\Sale::sum('total');
+        $boletasDespues = \App\Models\Sale::count();
+
+        $this->assertEquals($boletasAntes + 1, $boletasDespues);
+        $this->assertGreaterThan($ventasAntes, $ventasDespues);
+
+        // 5. Consultar el Dashboard y comprobar que tanto la Compra (LOT-COMPRA-777) como la nueva Venta están reflejadas
+        $dashResp = $this->actingAs($admin)->get(route('dashboard.index', ['periodo' => 'hoy']));
+        $dashResp->assertStatus(200);
+        $dashResp->assertSee('LOT-COMPRA-777');
+        $dashResp->assertSee(number_format($ventasDespues, 0, ',', '.'));
+    }
 }

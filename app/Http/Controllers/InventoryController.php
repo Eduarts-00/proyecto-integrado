@@ -101,10 +101,10 @@ class InventoryController extends Controller
 
         $data = $request->validate([
             'id_medicamento' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:medicamentos,id_medicamento'],
-            'lote_codigo' => ['required', 'string', 'max:60'],
+            'lote_codigo' => ['required', 'string', 'min:4', 'max:25', 'regex:/^[A-Za-z0-9\-_]+$/'],
             'ubicacion' => ['required', 'in:BODEGA,VITRINA'],
             'cantidad' => ['required', 'integer', 'min:1', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
-            'fecha_vencimiento' => ['required', 'date', 'after:today', 'before:2100-01-01'],
+            'fecha_vencimiento' => ['required', 'date', 'date_format:Y-m-d', 'after:today', 'before_or_equal:' . now()->addYears(10)->toDateString()],
         ]);
 
         try {
@@ -235,17 +235,17 @@ class InventoryController extends Controller
         }
 
         $data = $request->validate([
-            'codigo_barras' => ['required', 'string', 'max:50', 'unique:medicamentos,codigo_barras'],
-            'nombre_comercial' => ['required', 'string', 'max:150'],
-            'principio_activo' => ['required', 'string', 'max:150'],
-            'laboratorio' => ['required', 'string', 'max:100'],
-            'categoria' => ['nullable', 'string', 'max:80'],
+            'codigo_barras' => ['required', 'string', 'min:6', 'max:20', 'regex:/^[A-Za-z0-9\-]+$/', 'unique:medicamentos,codigo_barras'],
+            'nombre_comercial' => ['required', 'string', 'min:3', 'max:100'],
+            'principio_activo' => ['required', 'string', 'min:3', 'max:100'],
+            'laboratorio' => ['required', 'string', 'min:2', 'max:80'],
+            'categoria' => ['nullable', 'string', 'min:2', 'max:60'],
             'precio_unitario' => ['required', 'numeric', 'min:1', 'max:' . InventoryService::MAX_PRECIO_UNITARIO],
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
             'cantidad_inicial' => ['nullable', 'integer', 'min:0', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
-            'lote_codigo' => ['nullable', 'string', 'max:60'],
+            'lote_codigo' => ['nullable', 'string', 'min:4', 'max:25', 'regex:/^[A-Za-z0-9\-_]+$/'],
             'ubicacion_inicial' => ['nullable', 'in:BODEGA,VITRINA'],
-            'fecha_vencimiento' => ['nullable', 'date', 'after:today', 'before:2100-01-01'],
+            'fecha_vencimiento' => ['nullable', 'date', 'date_format:Y-m-d', 'after:today', 'before_or_equal:' . now()->addYears(10)->toDateString()],
         ]);
 
         try {
@@ -279,10 +279,10 @@ class InventoryController extends Controller
         }
 
         $data = $request->validate([
-            'nombre_comercial' => ['required', 'string', 'max:150'],
-            'principio_activo' => ['required', 'string', 'max:150'],
-            'laboratorio' => ['required', 'string', 'max:100'],
-            'categoria' => ['nullable', 'string', 'max:80'],
+            'nombre_comercial' => ['required', 'string', 'min:3', 'max:100'],
+            'principio_activo' => ['required', 'string', 'min:3', 'max:100'],
+            'laboratorio' => ['required', 'string', 'min:2', 'max:80'],
+            'categoria' => ['nullable', 'string', 'min:2', 'max:60'],
             'precio_unitario' => ['required', 'numeric', 'min:1', 'max:' . InventoryService::MAX_PRECIO_UNITARIO],
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
             'activo' => ['required', 'boolean'],

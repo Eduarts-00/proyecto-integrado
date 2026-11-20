@@ -26,12 +26,12 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'rut' => ['required', 'string', 'max:15'],
-            'nombre_completo' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:120', 'unique:usuarios,email'],
+            'rut' => ['required', 'string', 'min:8', 'max:15'],
+            'nombre_completo' => ['required', 'string', 'min:3', 'max:80', 'regex:/^[\pL\s\.\-]+$/u'],
+            'email' => ['required', 'email', 'min:5', 'max:80', 'unique:usuarios,email'],
             'id_rol' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:roles,id_rol'],
-            'password' => ['required', 'string', 'min:8', 'max:120'],
-            'pin_qf' => ['nullable', 'string', 'max:10'],
+            'password' => ['required', 'string', 'min:8', 'max:32'],
+            'pin_qf' => ['nullable', 'string', 'min:4', 'max:6', 'regex:/^[0-9]{4,6}$/'],
         ]);
 
         if (! RutValidator::validate($data['rut'])) {
@@ -75,18 +75,19 @@ class UserController extends Controller
         $usuario = User::findOrFail($idUsuario);
 
         $data = $request->validate([
-            'rut' => ['required', 'string', 'max:15'],
-            'nombre_completo' => ['required', 'string', 'max:120'],
+            'rut' => ['required', 'string', 'min:8', 'max:15'],
+            'nombre_completo' => ['required', 'string', 'min:3', 'max:80', 'regex:/^[\pL\s\.\-]+$/u'],
             'email' => [
                 'required',
                 'email',
-                'max:120',
+                'min:5',
+                'max:80',
                 Rule::unique('usuarios', 'email')->ignore($usuario->id_usuario, 'id_usuario'),
             ],
             'id_rol' => ['required', 'integer', 'min:1', 'max:2147483647', 'exists:roles,id_rol'],
             'activo' => ['required', 'boolean'],
-            'password' => ['nullable', 'string', 'min:8', 'max:120'],
-            'pin_qf' => ['nullable', 'string', 'max:10'],
+            'password' => ['nullable', 'string', 'min:8', 'max:32'],
+            'pin_qf' => ['nullable', 'string', 'min:4', 'max:6', 'regex:/^[0-9]{4,6}$/'],
         ]);
 
         if (! RutValidator::validate($data['rut'])) {

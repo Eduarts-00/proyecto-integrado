@@ -37,7 +37,8 @@
                                    id="pos-search-input"
                                    name="q"
                                    value="{{ $search }}"
-                                    autocomplete="off"
+                                   maxlength="100"
+                                   autocomplete="off"
                                    placeholder="Escribe las primeras letras (ej: Paracetamol, Losartán, Amox...)"
                                    class="w-full pl-9 pr-8 py-2.5 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 outline-none font-medium text-slate-800">
                             <button type="button"
@@ -79,6 +80,7 @@
                                    id="pos-barcode-input"
                                    name="codigo_barras"
                                    required
+                                   maxlength="30"
                                    autocomplete="off"
                                    placeholder="Código EAN o 3*EAN..."
                                    class="w-full px-3 py-2.5 text-xs rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-100 font-mono-code font-bold text-slate-900 outline-none transition">
@@ -568,11 +570,13 @@
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">RUN del Paciente</label>
                     <input type="text" name="autorizacion_isp[rut_paciente]" value="18.455.120-K" required
+                           minlength="8" maxlength="12"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">RUN del Médico Prescriptor</label>
                     <input type="text" name="autorizacion_isp[rut_medico]" value="09.876.543-2" required
+                           minlength="8" maxlength="12"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
             </div>
@@ -581,11 +585,13 @@
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Folio Receta Retenida</label>
                     <input type="text" name="autorizacion_isp[folio_receta]" value="REC-2026-{{ rand(8850, 9999) }}" required
+                           minlength="4" maxlength="25"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
                     <label class="block font-bold text-[#EF4444] mb-1">PIN de Autorización Q.F.</label>
                     <input type="password" name="autorizacion_isp[pin_qf]" value="4421" required
+                           minlength="4" maxlength="6"
                            placeholder="Ingrese PIN"
                            class="w-full px-3 py-2 rounded-lg border-2 border-red-300 bg-red-50/40 font-mono-code font-bold text-center">
                 </div>
@@ -629,17 +635,20 @@
             <div>
                 <label class="block font-bold text-slate-700 mb-1">Folio Receta Retenida</label>
                 <input type="text" name="folio_receta" value="REC-2026-{{ rand(8850, 9999) }}" required
+                       minlength="4" maxlength="25"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">RUN del Paciente</label>
                     <input type="text" name="rut_paciente" value="18.455.120-K" required
+                           minlength="8" maxlength="12"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">RUN del Médico</label>
                     <input type="text" name="rut_medico" value="09.876.543-2" required
+                           minlength="8" maxlength="12"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
             </div>

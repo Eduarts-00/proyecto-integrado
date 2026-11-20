@@ -46,11 +46,13 @@
             <div>
                 <label class="block font-bold text-slate-600 mb-1">Vigentes desde</label>
                 <input type="date" name="desde" value="{{ $fechaDesde ?? '' }}"
+                       min="2020-01-01" max="{{ now()->addYears(5)->toDateString() }}"
                        class="px-3 py-1.5 rounded-lg border border-slate-300 font-mono-code">
             </div>
             <div>
                 <label class="block font-bold text-slate-600 mb-1">Vigentes hasta</label>
                 <input type="date" name="hasta" value="{{ $fechaHasta ?? '' }}"
+                       min="2020-01-01" max="{{ now()->addYears(5)->toDateString() }}"
                        class="px-3 py-1.5 rounded-lg border border-slate-300 font-mono-code">
             </div>
             <div class="flex items-center gap-2">
@@ -231,8 +233,9 @@
             @csrf
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio (3 a 80 caract.)</label>
                     <input type="text" name="nombre_convenio" required placeholder="Ej: Isapre Vida Tres"
+                           minlength="3" maxlength="80"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
                 </div>
                 <div>
@@ -246,11 +249,13 @@
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Fecha de Inicio</label>
                     <input type="date" name="fecha_inicio" value="{{ now()->toDateString() }}"
+                           min="2020-01-01" max="{{ now()->addYears(5)->toDateString() }}"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Fecha de Término</label>
                     <input type="date" name="fecha_fin" value="{{ now()->addYear()->toDateString() }}"
+                           min="{{ now()->toDateString() }}" max="{{ now()->addYears(5)->toDateString() }}"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
             </div>
@@ -314,8 +319,9 @@
             @method('PUT')
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio (3 a 80 caract.)</label>
                     <input type="text" id="edit-nombre-convenio" name="nombre_convenio" required
+                           minlength="3" maxlength="80"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
                 </div>
                 <div>
@@ -329,11 +335,13 @@
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Fecha de Inicio</label>
                     <input type="date" id="edit-fecha-inicio" name="fecha_inicio"
+                           min="2020-01-01" max="{{ now()->addYears(5)->toDateString() }}"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">Fecha de Término</label>
                     <input type="date" id="edit-fecha-fin" name="fecha_fin"
+                           min="2020-01-01" max="{{ now()->addYears(5)->toDateString() }}"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
             </div>
