@@ -6,7 +6,8 @@
 @php
     $canManageStock = auth()->user()->hasPermission('Can_Manage_Stock');
     $canManageMedications = auth()->user()->hasPermission('Can_Manage_Medications');
-    $canToggleLote = $canManageStock || $canManageMedications || auth()->user()->role === 'administrador';
+    $canDarDeBaja = auth()->user()->role === 'quimico_farmaceutico';
+    $canToggleLote = $canManageStock || $canManageMedications || $canDarDeBaja || auth()->user()->role === 'administrador';
     $stockFilter = $stockFilter ?? '';
     $orden = $orden ?? '';
     $reponerMedId = $reponerMedId ?? 0;
@@ -19,93 +20,14 @@
 <div class="space-y-4">
 
     <!-- ========================================================================= -->
-    <!-- CABECERA Y CENTRO DE OPERACIONES RÁPIDAS (SIEMPRE VISIBLE EN TODA VISTA)  -->
-    <!-- ========================================================================= -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-        <div>
-            <div class="flex flex-wrap items-center gap-2">
-                <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario, Lotes FEFO y Catálogo</h1>
-                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                    Perfil: {{ auth()->user()->role_label }}
-                </span>
-            </div>
-            <p class="text-xs text-slate-500 mt-0.5">
-                Ordenamiento por cantidad de stock y vencimiento (FEFO), alertas de reposición por poco stock y recepción de lotes.
-            </p>
-        </div>
-
-        <!-- Botonera Principal Siempre Accesible (Respetando Permisos RBAC) -->
-        <div class="flex flex-wrap items-center gap-2">
-            <!-- 1. Alerta Interactiva de Poco Stock -->
-            <button type="button"
-                    id="btn-alerta-stock-bajo-top"
-                    onclick="toggleLowStockAlertPanel()"
-                    title="Ver los {{ $alertasStockBajo->count() }} medicamentos con poco stock o agotados en vitrina para abastecerlos"
-                    class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ $stockFilter === 'bajo' ? 'bg-red-600 border-red-700 text-white ring-2 ring-red-300' : 'bg-red-50 hover:bg-red-100 border-red-300 text-red-800' }}">
-                <span>📉 {{ $alertasStockBajo->count() }} con poco stock</span>
-                <span id="btn-alerta-stock-action" class="text-[10px] underline ml-0.5">{{ $stockFilter === 'bajo' ? '(Ver todos)' : 'Abastecer →' }}</span>
-            </button>
-
-            <!-- 2. Alerta Interactiva FEFO (<= 30 días) -->
-            <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
-               id="btn-alerta-fefo-top"
-               onclick="return handleFefoAlertBadgeClick(event)"
-               title="Ver los {{ $alertasFefo->count() }} lotes próximos a vencer (≤ 30 días)"
-               class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ ($fefo ?? '') === 'por_vencer' ? 'bg-amber-600 border-amber-700 text-white ring-2 ring-amber-300' : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800' }}">
-                <span>⚠️ {{ $alertasFefo->count() }} lotes próx. a vencer</span>
-                <span id="btn-alerta-fefo-action" class="text-[10px] underline ml-0.5">{{ ($fefo ?? '') === 'por_vencer' ? '(Ver todos)' : 'Ver →' }}</span>
-            </a>
-
-            <!-- 3. Botón Siempre Visible: Ingresar Lote / Añadir Stock (Bodeguero y Administrador) -->
-            @if($canManageStock)
-                <button type="button"
-                        onclick="openNuevaRemesaForMedication(null)"
-                        class="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
-                    <span>📦 + Ingresar Lote (Stock)</span>
-                </button>
-
-                <button type="button"
-                        onclick="document.getElementById('modal-traspaso-fefo').classList.remove('hidden')"
-                        class="px-3.5 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
-                    &uarr; Traspasar Bodega &rarr; Vitrina
-                </button>
-            @endif
-
-            <!-- 4. Botón Siempre Visible: Nuevo Producto al Catálogo (Q. Farmacéutico y Administrador) -->
-            @if($canManageMedications)
-                <button type="button"
-                        onclick="document.getElementById('modal-nuevo-medicamento').classList.remove('hidden')"
-                        class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
-                    <span>💊 + Nuevo Producto</span>
-                </button>
-            @endif
-
-            <!-- 5. Retiro Vitrina -> Bodega -->
-            @if($canToggleLote)
-                <button type="button"
-                        onclick="document.getElementById('modal-retiro-vitrina').classList.remove('hidden')"
-                        class="px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold shadow-2xs transition">
-                    &darr; Retirar a Bodega
-                </button>
-            @endif
-
-            @if(! $canManageStock && ! $canManageMedications)
-                <span class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold">
-                    🔒 Modo Consulta (Reposición de lotes reservada a Bodega / Admin)
-                </span>
-            @endif
-        </div>
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- PANEL INTERACTIVO DE ALERTAS DE POCO STOCK Y REPOSICIÓN EN 1 CLIC         -->
+    <!-- ALERTA SUPERIOR DE CONTROL DE STOCK (VISIBLE ARRIBA EN TIEMPO REAL)       -->
     <!-- ========================================================================= -->
     @if($alertasStockBajo->isNotEmpty())
         <div id="panel-alertas-stock-bajo"
-             class="{{ ($stockFilter === 'bajo' || $reponerMedId > 0) ? '' : 'hidden' }} bg-gradient-to-r from-red-50/90 via-amber-50/80 to-white rounded-xl border border-red-200 p-4 shadow-sm space-y-3">
+             class="bg-gradient-to-r from-red-50/90 via-amber-50/80 to-white rounded-xl border border-red-200 p-4 shadow-sm space-y-3">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div class="flex items-start sm:items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                    <span class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center font-bold text-sm shrink-0 animate-pulse-badge">
                         📉
                     </span>
                     <div>
@@ -128,15 +50,15 @@
                         Filtrar y ordenar por menor stock
                     </button>
                     <button type="button"
-                            onclick="document.getElementById('panel-alertas-stock-bajo').classList.add('hidden')"
+                            onclick="document.getElementById('panel-alertas-stock-bajo-grid').classList.toggle('hidden')"
                             class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 font-bold text-[11px]">
-                        Ocultar
+                        Compactar / Expandir
                     </button>
                 </div>
             </div>
 
             <!-- Tarjetas / Chips Clicables de Medicamentos con Poco Stock -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-60 overflow-y-auto pr-1">
+            <div id="panel-alertas-stock-bajo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto pr-1">
                 @foreach($alertasStockBajo as $medBajo)
                     @php
                         $vit = $medBajo->stock_vitrina;
@@ -228,6 +150,85 @@
             </div>
         </div>
     @endif
+
+    <!-- ========================================================================= -->
+    <!-- CABECERA Y CENTRO DE OPERACIONES RÁPIDAS (SIEMPRE VISIBLE EN TODA VISTA)  -->
+    <!-- ========================================================================= -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div>
+            <div class="flex flex-wrap items-center gap-2">
+                <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario, Lotes FEFO y Catálogo</h1>
+                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                    Perfil: {{ auth()->user()->role_label }}
+                </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+                Ordenamiento por cantidad de stock y vencimiento (FEFO), alertas de reposición por poco stock y recepción de lotes.
+            </p>
+        </div>
+
+        <!-- Botonera Principal Siempre Accesible (Respetando Permisos RBAC) -->
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- 1. Alerta Interactiva de Poco Stock -->
+            <button type="button"
+                    id="btn-alerta-stock-bajo-top"
+                    onclick="toggleLowStockAlertPanel()"
+                    title="Ver los {{ $alertasStockBajo->count() }} medicamentos con poco stock o agotados en vitrina para abastecerlos"
+                    class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ $stockFilter === 'bajo' ? 'bg-red-600 border-red-700 text-white ring-2 ring-red-300' : 'bg-red-50 hover:bg-red-100 border-red-300 text-red-800' }}">
+                <span>📉 {{ $alertasStockBajo->count() }} con poco stock</span>
+                <span id="btn-alerta-stock-action" class="text-[10px] underline ml-0.5">{{ $stockFilter === 'bajo' ? '(Ver todos)' : 'Abastecer →' }}</span>
+            </button>
+
+            <!-- 2. Alerta Interactiva FEFO (<= 30 días) -->
+            <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
+               id="btn-alerta-fefo-top"
+               onclick="return handleFefoAlertBadgeClick(event)"
+               title="Ver los {{ $alertasFefo->count() }} lotes próximos a vencer (≤ 30 días)"
+               class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ ($fefo ?? '') === 'por_vencer' ? 'bg-amber-600 border-amber-700 text-white ring-2 ring-amber-300' : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800' }}">
+                <span>⚠️ {{ $alertasFefo->count() }} lotes próx. a vencer</span>
+                <span id="btn-alerta-fefo-action" class="text-[10px] underline ml-0.5">{{ ($fefo ?? '') === 'por_vencer' ? '(Ver todos)' : 'Ver →' }}</span>
+            </a>
+
+            <!-- 3. Botón Siempre Visible: Ingresar Lote / Añadir Stock (Bodeguero y Administrador) -->
+            @if($canManageStock)
+                <button type="button"
+                        onclick="openNuevaRemesaForMedication(null)"
+                        class="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                    <span>📦 + Ingresar Lote (Stock)</span>
+                </button>
+
+                <button type="button"
+                        onclick="document.getElementById('modal-traspaso-fefo').classList.remove('hidden')"
+                        class="px-3.5 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
+                    &uarr; Traspasar Bodega &rarr; Vitrina
+                </button>
+            @endif
+
+            <!-- 4. Botón Siempre Visible: Nuevo Producto al Catálogo (Q. Farmacéutico y Administrador) -->
+            @if($canManageMedications)
+                <button type="button"
+                        onclick="document.getElementById('modal-nuevo-medicamento').classList.remove('hidden')"
+                        class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                    <span>💊 + Nuevo Producto</span>
+                </button>
+            @endif
+
+            <!-- 5. Retiro Vitrina -> Bodega -->
+            @if($canToggleLote)
+                <button type="button"
+                        onclick="document.getElementById('modal-retiro-vitrina').classList.remove('hidden')"
+                        class="px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold shadow-2xs transition">
+                    &darr; Retirar a Bodega
+                </button>
+            @endif
+
+            @if(! $canManageStock && ! $canManageMedications)
+                <span class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold">
+                    🔒 Modo Consulta (Reposición de lotes reservada a Bodega / Admin)
+                </span>
+            @endif
+        </div>
+    </div>
 
     <!-- Aviso de Permisos cuando un rol sin Can_Manage_Stock pincha una alerta de reposición -->
     <div id="low-stock-permission-notice"
@@ -890,30 +891,37 @@
                                                 </button>
                                             @endif
 
-                                            @if($lote->activo)
-                                                <button type="button"
-                                                        onclick="openBajaCaducidadModal({{ json_encode([
-                                                            'id_lote' => $lote->id_lote,
-                                                            'lote_codigo' => $lote->lote_codigo,
-                                                            'medicamento' => $medLote?->nombre_comercial,
-                                                            'ubicacion' => $lote->ubicacion,
-                                                            'cantidad' => $lote->cantidad,
-                                                            'dias' => $dias,
-                                                            'action_url' => route('inventario.toggle_batch', $lote->id_lote),
-                                                        ]) }})"
-                                                        class="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-bold text-[11px] transition"
-                                                        title="Retirar de {{ $lote->ubicacion }} por caducidad o merma sanitaria">
-                                                    {{ $dias <= 30 ? '🗑️ Caducado' : '🗑️ Baja' }}
-                                                </button>
-                                            @else
-                                                <form action="{{ route('inventario.toggle_batch', $lote->id_lote) }}" method="POST" class="inline">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit"
-                                                            class="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition">
-                                                        ↺ Restaurar a {{ $lote->ubicacion }}
+                                            @if($canDarDeBaja)
+                                                @if($lote->activo)
+                                                    <button type="button"
+                                                            onclick="openBajaCaducidadModal({{ json_encode([
+                                                                'id_lote' => $lote->id_lote,
+                                                                'lote_codigo' => $lote->lote_codigo,
+                                                                'medicamento' => $medLote?->nombre_comercial,
+                                                                'ubicacion' => $lote->ubicacion,
+                                                                'cantidad' => $lote->cantidad,
+                                                                'dias' => $dias,
+                                                                'action_url' => route('inventario.toggle_batch', $lote->id_lote),
+                                                            ]) }})"
+                                                            class="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50/80 hover:bg-red-100 text-red-700 font-bold text-[11px] transition"
+                                                            title="Exclusivo Químico Farmacéutico: Retirar de {{ $lote->ubicacion }} por caducidad o merma sanitaria">
+                                                        {{ $dias <= 30 ? '🗑️ Caducado' : '🗑️ Baja' }}
                                                     </button>
-                                                </form>
+                                                @else
+                                                    <form action="{{ route('inventario.toggle_batch', $lote->id_lote) }}" method="POST" class="inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button type="submit"
+                                                                class="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition">
+                                                            ↺ Restaurar a {{ $lote->ubicacion }}
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @else
+                                                <span class="px-2 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-400 font-semibold text-[10px]"
+                                                      title="Por normativa sanitaria ISP, solo el Químico Farmacéutico está facultado para dar de baja medicamentos">
+                                                    🔒 Baja solo Q.F.
+                                                </span>
                                             @endif
                                         </div>
                                     </td>
@@ -1135,11 +1143,19 @@
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Estado</label>
-                        <select id="edit-med-activo" name="activo"
-                                class="w-full px-2.5 py-2 rounded-lg border border-slate-300">
-                            <option value="1">Activo</option>
-                            <option value="0">Deshabilitado</option>
-                        </select>
+                        @if($canDarDeBaja)
+                            <select id="edit-med-activo" name="activo"
+                                    class="w-full px-2.5 py-2 rounded-lg border border-slate-300">
+                                <option value="1">Activo</option>
+                                <option value="0">Deshabilitado (Dar de baja)</option>
+                            </select>
+                        @else
+                            <input type="hidden" id="edit-med-activo" name="activo" value="1">
+                            <div class="w-full px-2.5 py-2 rounded-lg border border-slate-200 bg-slate-100 text-slate-500 text-[11px] font-semibold"
+                                 title="Solo el Químico Farmacéutico está facultado para dar de baja medicamentos">
+                                🔒 Activo (Baja solo Q.F.)
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">

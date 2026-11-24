@@ -73,6 +73,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['role:bodeguero,quimico_farmaceutico,administrador'])->group(function () {
         Route::post('/inventario/retiro-vitrina', [InventoryController::class, 'transferToStorage'])->name('inventario.return_to_storage');
+    });
+
+    // Baja sanitaria por caducidad o merma: Exclusivo Químico Farmacéutico (Director Técnico ISP)
+    Route::middleware(['role:quimico_farmaceutico'])->group(function () {
         Route::patch('/inventario/lotes/{idLote}/estado', [InventoryController::class, 'toggleBatchStatus'])->name('inventario.toggle_batch');
     });
 

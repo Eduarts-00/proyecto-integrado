@@ -26,6 +26,10 @@
         $currentUser = auth()->user();
         $role = $currentUser?->role ?? 'vendedor';
         $pendingIspCount = \App\Models\IspLog::where('estado', 'PENDIENTE')->count();
+        $invServiceLayout = app(\App\Services\InventoryService::class);
+        $lowStockAlertsLayout = $invServiceLayout->checkLowStockAlerts();
+        $lowStockCountLayout = $lowStockAlertsLayout->count();
+        $fefoAlertsCountLayout = $invServiceLayout->checkExpiryAlerts(30)->count();
         $quickSwitchUsers = \App\Models\User::with('rol')
             ->where('activo', true)
             ->where('acceso_rapido', true)
@@ -136,6 +140,12 @@
                         <a href="{{ route('inventario.index') }}"
                            class="flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition {{ request()->routeIs('inventario.*') ? 'bg-[#1E40AF] text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                             <span class="flex items-center gap-2.5">📦 Inventario</span>
+                            @if($lowStockCountLayout > 0)
+                                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500 text-slate-950 animate-pulse-badge"
+                                      title="{{ $lowStockCountLayout }} medicamento(s) en alerta de control de stock">
+                                    {{ $lowStockCountLayout }}
+                                </span>
+                            @endif
                         </a>
                     @endif
 
@@ -210,8 +220,8 @@
 
     <!-- Contenedor Principal -->
     <div class="flex-1 flex flex-col min-w-0">
-        <!-- Top Status Bar (Fija arriba con Cerrar Sesión rápido) -->
-        <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-2.5 flex items-center justify-between text-xs text-slate-500">
+        <!-- Top Status Bar (Fija arriba con Alertas Globales de Recetas ISP, Control de Stock, FEFO y Cerrar Sesión) -->
+        <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
             <div class="flex items-center gap-3">
                 <span class="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
                     <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
@@ -220,12 +230,94 @@
                 <span class="text-slate-300">|</span>
                 <span id="live-clock" class="font-mono-code text-slate-500">{{ now()->format('H:i:s') }}</span>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2.5">
+                {{-- 1. Alerta Superior de Control de Stock (Igual que la alerta de Receta Retenida del Q.F.) --}}
+                @if($lowStockCountLayout > 0 && in_array($role, ['bodeguero', 'quimico_farmaceutico', 'administrador', 'vendedor'], true))
+                    <div class="relative" id="top-stock-alert-wrapper">
+                        <div class="inline-flex items-center rounded-full bg-amber-50 border border-amber-300 shadow-2xs overflow-hidden">
+                            <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#panel-alertas-stock-bajo"
+                               class="inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1 text-amber-900 hover:bg-amber-100/80 font-bold text-[11px] animate-pulse-badge transition"
+                               title="Ir a los {{ $lowStockCountLayout }} medicamentos con poco stock o agotados en vitrina">
+                                <span>📉 {{ $lowStockCountLayout }} Control de Stock (Poco Stock)</span>
+                            </a>
+                            <button type="button"
+                                    onclick="document.getElementById('top-stock-alert-dropdown').classList.toggle('hidden')"
+                                    class="px-2 py-1 border-l border-amber-300 bg-amber-100/60 hover:bg-amber-200 text-amber-900 font-bold text-[10px] transition"
+                                    title="Desplegar lista rápida de medicamentos con poco stock">
+                                ▼
+                            </button>
+                        </div>
+
+                        <!-- Desplegable Rápido Superior de Control de Stock (Permite pinchar cualquier medicamento directo desde arriba) -->
+                        <div id="top-stock-alert-dropdown"
+                             class="hidden absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-2xl z-50 overflow-hidden">
+                            <div class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between">
+                                <div>
+                                    <div class="font-bold text-xs">📉 Alertas de Control de Stock ({{ $lowStockCountLayout }})</div>
+                                    <div class="text-[10px] text-slate-300">
+                                        @if($currentUser?->hasPermission('Can_Manage_Stock'))
+                                            Pincha un medicamento para añadirle más stock
+                                        @else
+                                            Pincha un medicamento para consultarlo en Inventario
+                                        @endif
+                                    </div>
+                                </div>
+                                <button type="button"
+                                        onclick="document.getElementById('top-stock-alert-dropdown').classList.add('hidden')"
+                                        class="text-slate-400 hover:text-white font-bold text-xs">✕</button>
+                            </div>
+                            <div class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                                @foreach($lowStockAlertsLayout->take(8) as $medTop)
+                                    @php
+                                        $vTop = $medTop->stock_vitrina;
+                                        $bTop = $medTop->stock_bodega;
+                                    @endphp
+                                    <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA', 'q' => $medTop->nombre_comercial, 'reponer_med' => $medTop->id_medicamento]) }}#tabla-lotes-fefo"
+                                       class="px-4 py-2.5 hover:bg-amber-50/70 transition flex items-center justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-slate-900 text-xs truncate">{{ $medTop->nombre_comercial }}</div>
+                                            <div class="text-[10px] text-slate-500 font-mono-code truncate">
+                                                {{ $medTop->laboratorio }} • EAN {{ $medTop->codigo_barras }}
+                                            </div>
+                                        </div>
+                                        <div class="text-right shrink-0">
+                                            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold {{ $vTop <= 0 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-300' }}">
+                                                {{ $vTop <= 0 ? '🚨 0 en Vitrina' : '📉 ' . $vTop . ' u. en Vitrina' }}
+                                            </span>
+                                            <div class="text-[10px] text-slate-500 font-mono-code mt-0.5">
+                                                Bodega: {{ $bTop }} u. &rarr;
+                                            </div>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
+                            <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                                <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#panel-alertas-stock-bajo"
+                                   class="text-[11px] font-bold text-[#1E40AF] hover:underline">
+                                    Ver todos ordenados por menor stock &rarr;
+                                </a>
+                                <span class="text-[10px] text-slate-400">{{ $currentUser?->role_label }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- 2. Alerta Superior de Lotes Próximos a Vencer (FEFO <= 30 días) --}}
+                @if($fefoAlertsCountLayout > 0 && in_array($role, ['bodeguero', 'quimico_farmaceutico', 'administrador'], true))
+                    <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
+                       class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 hover:bg-orange-100 border border-orange-300 text-orange-800 font-bold text-[11px] transition"
+                       title="Ver los {{ $fefoAlertsCountLayout }} lotes próximos a vencer (≤ 30 días)">
+                        ⏳ {{ $fefoAlertsCountLayout }} Lote(s) FEFO &le; 30d
+                    </a>
+                @endif
+
+                {{-- 3. Alerta Superior de Recetas Retenidas Pendientes (Q. Farmacéutico y Administrador) --}}
                 @if($pendingIspCount > 0 && in_array($role, ['quimico_farmaceutico', 'administrador'], true))
                     <a href="{{ route('autorizaciones.index') }}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-[#EF4444] font-semibold text-[11px] animate-pulse-badge">
                         ⚠️ {{ $pendingIspCount }} Receta(s) Pendiente(s)
                     </a>
                 @endif
+
                 <span class="hidden sm:inline font-mono-code text-slate-400">ISP Reg. #4421</span>
                 <span class="hidden sm:inline text-slate-200">|</span>
                 <form action="{{ route('logout') }}" method="POST" class="inline">
@@ -369,6 +461,14 @@
         }, 1000);
 
         // Protección Global de Inputs (Límites de Fechas, Números y Caracteres)
+        document.addEventListener('click', function(e) {
+            const topStockWrapper = document.getElementById('top-stock-alert-wrapper');
+            const topStockDropdown = document.getElementById('top-stock-alert-dropdown');
+            if (topStockWrapper && topStockDropdown && !topStockWrapper.contains(e.target)) {
+                topStockDropdown.classList.add('hidden');
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // 1. Regular todos los campos de fecha para evitar años de 5 dígitos o fuera de rango
             document.querySelectorAll('input[type="date"]').forEach(dateInput => {

@@ -102,6 +102,7 @@ class User extends Authenticatable
                 'Can_Sell_OTC',
                 'Can_Authorize_Prescription',
                 'Can_Manage_Medications',
+                'Can_Deactivate_Medications',
                 'pos.view',
                 'pos.sell',
                 'autorizaciones.view',

@@ -240,12 +240,13 @@ class InventoryController extends Controller
 
     /**
      * Da de baja sanitaria un lote o lo rehabilita a través de la Capa de Servicio.
+     * Exclusivo del Químico Farmacéutico (Director Técnico ISP - D.S. N° 466).
      */
     public function toggleBatchStatus(Request $request, int $idLote)
     {
         $user = $request->user();
-        if (! $user || (! $user->hasPermission('Can_Manage_Stock') && ! $user->hasPermission('Can_Manage_Medications') && $user->role !== 'administrador')) {
-            abort(403, 'Solo Bodega, Químico Farmacéutico o Administración pueden dar de baja o rehabilitar un lote.');
+        if (! $user || $user->role !== 'quimico_farmaceutico') {
+            abort(403, 'Por normativa sanitaria ISP (D.S. N° 466), solo el Químico Farmacéutico está facultado para dar de baja o rehabilitar medicamentos.');
         }
 
         $request->validate([
@@ -339,6 +340,10 @@ class InventoryController extends Controller
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
             'activo' => ['required', 'boolean'],
         ]);
+
+        if (! (bool) $data['activo'] && $request->user()?->role !== 'quimico_farmaceutico') {
+            abort(403, 'Por normativa sanitaria ISP, solo el Químico Farmacéutico está facultado para dar de baja medicamentos.');
+        }
 
         try {
             $medicamento = $this->inventoryService->updateMedication($idMedicamento, $data);

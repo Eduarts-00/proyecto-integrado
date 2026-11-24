@@ -407,11 +407,26 @@ class ExampleTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $qf = User::where('rut', '11.222.333-4')->firstOrFail();
+        $bodeguero = User::where('rut', '15.432.876-5')->firstOrFail();
+        $admin = User::where('rut', '10.111.222-3')->firstOrFail();
         $loteCritico = \App\Models\Batch::where('lote_codigo', 'LOT-2024-005')->firstOrFail(); // Clonazepam 5 días para vencer
 
         $this->assertTrue($loteCritico->activo);
 
-        // 1. Dar de baja por caducidad
+        // 0. Ni el Bodeguero ni el Administrador pueden dar de baja medicamentos/lotes (Exclusivo Q. Farmacéutico -> 403)
+        $bodegueroBajaResp = $this->actingAs($bodeguero)->patch(route('inventario.toggle_batch', $loteCritico->id_lote), [
+            'motivo_baja' => 'Intento de baja por Bodeguero',
+        ]);
+        $bodegueroBajaResp->assertStatus(403);
+        $this->assertTrue($loteCritico->fresh()->activo);
+
+        $adminBajaResp = $this->actingAs($admin)->patch(route('inventario.toggle_batch', $loteCritico->id_lote), [
+            'motivo_baja' => 'Intento de baja por Administrador',
+        ]);
+        $adminBajaResp->assertStatus(403);
+        $this->assertTrue($loteCritico->fresh()->activo);
+
+        // 1. El Químico Farmacéutico da de baja por caducidad exitosamente
         $resp = $this->actingAs($qf)->patch(route('inventario.toggle_batch', $loteCritico->id_lote), [
             'motivo_baja' => 'Retiro Preventivo por Vencimiento Próximo (< 30 días)',
         ]);
@@ -689,6 +704,7 @@ class ExampleTest extends TestCase
             'orden' => 'stock_asc',
         ]));
         $ascResp->assertStatus(200);
+        $ascResp->assertSee('Control de Stock (Poco Stock)');
         $ascResp->assertSee('+ Ingresar Lote (Stock)');
         $ascResp->assertSee('+ Nuevo Producto');
         $ascResp->assertViewHas('lotes', function ($lotes) {
