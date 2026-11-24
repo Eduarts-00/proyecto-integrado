@@ -235,7 +235,7 @@
                 @if($lowStockCountLayout > 0 && in_array($role, ['bodeguero', 'quimico_farmaceutico', 'administrador', 'vendedor'], true))
                     <div class="relative" id="top-stock-alert-wrapper">
                         <div class="inline-flex items-center rounded-full bg-amber-50 border border-amber-300 shadow-2xs overflow-hidden">
-                            <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#panel-alertas-stock-bajo"
+                            <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#tabla-lotes-fefo"
                                class="inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1 text-amber-900 hover:bg-amber-100/80 font-bold text-[11px] animate-pulse-badge transition"
                                title="Ir a los {{ $lowStockCountLayout }} medicamentos con poco stock o agotados en vitrina">
                                 <span>📉 {{ $lowStockCountLayout }} Control de Stock (Poco Stock)</span>
@@ -272,7 +272,7 @@
                                         $vTop = $medTop->stock_vitrina;
                                         $bTop = $medTop->stock_bodega;
                                     @endphp
-                                    <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA', 'q' => $medTop->nombre_comercial, 'reponer_med' => $medTop->id_medicamento]) }}#tabla-lotes-fefo"
+                                    <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'q' => $medTop->nombre_comercial, 'reponer_med' => $medTop->id_medicamento]) }}#tabla-lotes-fefo"
                                        class="px-4 py-2.5 hover:bg-amber-50/70 transition flex items-center justify-between gap-2">
                                         <div class="min-w-0">
                                             <div class="font-bold text-slate-900 text-xs truncate">{{ $medTop->nombre_comercial }}</div>
@@ -292,7 +292,7 @@
                                 @endforeach
                             </div>
                             <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-                                <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#panel-alertas-stock-bajo"
+                                <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#tabla-lotes-fefo"
                                    class="text-[11px] font-bold text-[#1E40AF] hover:underline">
                                     Ver todos ordenados por menor stock &rarr;
                                 </a>

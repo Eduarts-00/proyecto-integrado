@@ -69,21 +69,35 @@ class Medication extends Model
 
     public function getStockVitrinaAttribute(): int
     {
+        if ($this->relationLoaded('lotes')) {
+            return (int) $this->lotes
+                ->where('activo', true)
+                ->where('ubicacion', 'VITRINA')
+                ->where('cantidad', '>', 0)
+                ->sum('cantidad');
+        }
+
         return (int) $this->lotes()
             ->where('activo', true)
             ->where('ubicacion', 'VITRINA')
             ->where('cantidad', '>', 0)
-            ->whereDate('fecha_vencimiento', '>', now()->toDateString())
             ->sum('cantidad');
     }
 
     public function getStockBodegaAttribute(): int
     {
+        if ($this->relationLoaded('lotes')) {
+            return (int) $this->lotes
+                ->where('activo', true)
+                ->where('ubicacion', 'BODEGA')
+                ->where('cantidad', '>', 0)
+                ->sum('cantidad');
+        }
+
         return (int) $this->lotes()
             ->where('activo', true)
             ->where('ubicacion', 'BODEGA')
             ->where('cantidad', '>', 0)
-            ->whereDate('fecha_vencimiento', '>', now()->toDateString())
             ->sum('cantidad');
     }
 

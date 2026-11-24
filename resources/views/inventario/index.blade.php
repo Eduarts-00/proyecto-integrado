@@ -20,211 +20,51 @@
 <div class="space-y-4">
 
     <!-- ========================================================================= -->
-    <!-- ALERTA SUPERIOR DE CONTROL DE STOCK (VISIBLE ARRIBA EN TIEMPO REAL)       -->
+    <!-- CABECERA Y BOTONES DE OPERACIÓN (LIMPIA Y SIN DUPLICAR ALERTAS SUPERIORES) -->
     <!-- ========================================================================= -->
-    @if($alertasStockBajo->isNotEmpty())
-        <div id="panel-alertas-stock-bajo"
-             class="bg-gradient-to-r from-red-50/90 via-amber-50/80 to-white rounded-xl border border-red-200 p-4 shadow-sm space-y-3">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div class="flex items-start sm:items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center font-bold text-sm shrink-0 animate-pulse-badge">
-                        📉
-                    </span>
-                    <div>
-                        <h2 class="text-xs font-extrabold uppercase tracking-wider text-red-950">
-                            Alerta de Stock Bajo y Quiebres en Vitrina ({{ $alertasStockBajo->count() }} medicamentos requieren atención)
-                        </h2>
-                        <p class="text-[11px] text-slate-600">
-                            @if($canManageStock)
-                                <strong>Pincha cualquier medicamento con poco stock</strong> para ir directo a su registro y abrir el formulario de <strong>abastecimiento / nuevo lote</strong> o traspaso desde Bodega.
-                            @else
-                                <strong>Pincha cualquier medicamento</strong> para localizarlo y revisar su disponibilidad en la tabla. <span class="text-red-800 font-semibold">(🔒 Tu rol {{ auth()->user()->role_label }} es de consulta de stock; solicita a Bodega o Administración el ingreso de lotes).</span>
-                            @endif
-                        </p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button type="button"
-                            onclick="applyLowStockTableFilter()"
-                            class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] transition">
-                        Filtrar y ordenar por menor stock
-                    </button>
-                    <button type="button"
-                            onclick="document.getElementById('panel-alertas-stock-bajo-grid').classList.toggle('hidden')"
-                            class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 font-bold text-[11px]">
-                        Compactar / Expandir
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tarjetas / Chips Clicables de Medicamentos con Poco Stock -->
-            <div id="panel-alertas-stock-bajo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto pr-1">
-                @foreach($alertasStockBajo as $medBajo)
-                    @php
-                        $vit = $medBajo->stock_vitrina;
-                        $bod = $medBajo->stock_bodega;
-                        $umbral = $medBajo->umbral_stock_bajo;
-                        $esAgotadoVitrina = $vit <= 0;
-                        $loteBod = $loteBodegaPorMed->get($medBajo->id_medicamento);
-                    @endphp
-                    <div class="p-3 rounded-xl border bg-white hover:shadow-md transition flex flex-col justify-between gap-2 {{ $esAgotadoVitrina ? 'border-red-300 ring-1 ring-red-100' : 'border-amber-300' }}">
-                        <div class="flex items-start justify-between gap-2">
-                            <button type="button"
-                                    onclick="handleLowStockMedicationClick({{ json_encode([
-                                        'id_medicamento' => $medBajo->id_medicamento,
-                                        'nombre_comercial' => $medBajo->nombre_comercial,
-                                        'codigo_barras' => $medBajo->codigo_barras,
-                                        'stock_vitrina' => $vit,
-                                        'stock_bodega' => $bod,
-                                        'umbral' => $umbral,
-                                        'id_lote_bodega' => $loteBod?->id_lote,
-                                        'cant_lote_bodega' => $loteBod?->cantidad ?? 0,
-                                    ]) }})"
-                                    class="text-left group min-w-0 flex-1">
-                                <div class="font-bold text-xs text-slate-900 group-hover:text-[#1E40AF] truncate">
-                                    {{ $medBajo->nombre_comercial }}
-                                </div>
-                                <div class="text-[10px] text-slate-500 font-mono-code truncate">
-                                    EAN: {{ $medBajo->codigo_barras }} • {{ $medBajo->laboratorio }}
-                                </div>
-                            </button>
-
-                            @if($esAgotadoVitrina)
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200 shrink-0">
-                                    🚨 0 en Vitrina
-                                </span>
-                            @else
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 shrink-0">
-                                    📉 {{ $vit }} u. (Mín {{ $umbral }})
-                                </span>
-                            @endif
-                        </div>
-
-                        <div class="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px]">
-                            <span class="text-slate-500 font-mono-code">
-                                Vit: <strong class="{{ $esAgotadoVitrina ? 'text-red-600' : 'text-amber-700' }}">{{ $vit }}</strong> | Bod: <strong class="text-slate-800">{{ $bod }}</strong>
-                            </span>
-
-                            @if($canManageStock)
-                                <div class="flex items-center gap-1">
-                                    @if($loteBod && $bod > 0)
-                                        <button type="button"
-                                                onclick="openTraspasoVitrinaModal({{ $loteBod->id_lote }}, {{ min(30, $loteBod->cantidad) }})"
-                                                class="px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-100 text-[#1E40AF] border border-blue-200 font-bold text-[10px] transition"
-                                                title="Traspasar stock disponible desde Bodega a Vitrina">
-                                            &uarr; De Bodega
-                                        </button>
-                                    @endif
-                                    <button type="button"
-                                            onclick="handleLowStockMedicationClick({{ json_encode([
-                                                'id_medicamento' => $medBajo->id_medicamento,
-                                                'nombre_comercial' => $medBajo->nombre_comercial,
-                                                'codigo_barras' => $medBajo->codigo_barras,
-                                                'stock_vitrina' => $vit,
-                                                'stock_bodega' => $bod,
-                                                'umbral' => $umbral,
-                                                'id_lote_bodega' => $loteBod?->id_lote,
-                                                'cant_lote_bodega' => $loteBod?->cantidad ?? 0,
-                                            ]) }})"
-                                            class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition">
-                                        + Añadir Lote &rarr;
-                                    </button>
-                                </div>
-                            @else
-                                <button type="button"
-                                        onclick="handleLowStockMedicationClick({{ json_encode([
-                                            'id_medicamento' => $medBajo->id_medicamento,
-                                            'nombre_comercial' => $medBajo->nombre_comercial,
-                                            'codigo_barras' => $medBajo->codigo_barras,
-                                            'stock_vitrina' => $vit,
-                                            'stock_bodega' => $bod,
-                                            'umbral' => $umbral,
-                                        ]) }})"
-                                        class="px-2 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] transition">
-                                    Ver en tabla &rarr;
-                                </button>
-                            @endif
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
-    <!-- ========================================================================= -->
-    <!-- CABECERA Y CENTRO DE OPERACIONES RÁPIDAS (SIEMPRE VISIBLE EN TODA VISTA)  -->
-    <!-- ========================================================================= -->
-    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-            <div class="flex flex-wrap items-center gap-2">
-                <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario, Lotes FEFO y Catálogo</h1>
-                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                    Perfil: {{ auth()->user()->role_label }}
-                </span>
-            </div>
+            <h1 class="text-xl font-bold text-slate-900">Gestión de Inventario y Catálogo</h1>
             <p class="text-xs text-slate-500 mt-0.5">
-                Ordenamiento por cantidad de stock y vencimiento (FEFO), alertas de reposición por poco stock y recepción de lotes.
+                Control de lotes por vencimiento (FEFO), ordenamiento por stock y clasificación de recetas restringidas.
             </p>
         </div>
 
-        <!-- Botonera Principal Siempre Accesible (Respetando Permisos RBAC) -->
+        <!-- Botonera de Acciones según Permisos RBAC -->
         <div class="flex flex-wrap items-center gap-2">
-            <!-- 1. Alerta Interactiva de Poco Stock -->
-            <button type="button"
-                    id="btn-alerta-stock-bajo-top"
-                    onclick="toggleLowStockAlertPanel()"
-                    title="Ver los {{ $alertasStockBajo->count() }} medicamentos con poco stock o agotados en vitrina para abastecerlos"
-                    class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ $stockFilter === 'bajo' ? 'bg-red-600 border-red-700 text-white ring-2 ring-red-300' : 'bg-red-50 hover:bg-red-100 border-red-300 text-red-800' }}">
-                <span>📉 {{ $alertasStockBajo->count() }} con poco stock</span>
-                <span id="btn-alerta-stock-action" class="text-[10px] underline ml-0.5">{{ $stockFilter === 'bajo' ? '(Ver todos)' : 'Abastecer →' }}</span>
-            </button>
-
-            <!-- 2. Alerta Interactiva FEFO (<= 30 días) -->
-            <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
-               id="btn-alerta-fefo-top"
-               onclick="return handleFefoAlertBadgeClick(event)"
-               title="Ver los {{ $alertasFefo->count() }} lotes próximos a vencer (≤ 30 días)"
-               class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ ($fefo ?? '') === 'por_vencer' ? 'bg-amber-600 border-amber-700 text-white ring-2 ring-amber-300' : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800' }}">
-                <span>⚠️ {{ $alertasFefo->count() }} lotes próx. a vencer</span>
-                <span id="btn-alerta-fefo-action" class="text-[10px] underline ml-0.5">{{ ($fefo ?? '') === 'por_vencer' ? '(Ver todos)' : 'Ver →' }}</span>
-            </a>
-
-            <!-- 3. Botón Siempre Visible: Ingresar Lote / Añadir Stock (Bodeguero y Administrador) -->
-            @if($canManageStock)
+            @if($canToggleLote)
                 <button type="button"
-                        onclick="openNuevaRemesaForMedication(null)"
-                        class="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
-                    <span>📦 + Ingresar Lote (Stock)</span>
+                        onclick="document.getElementById('modal-retiro-vitrina').classList.remove('hidden')"
+                        class="px-3.5 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold shadow-2xs transition">
+                    &darr; Retirar a Bodega
                 </button>
+            @endif
 
+            @if($canManageStock)
                 <button type="button"
                         onclick="document.getElementById('modal-traspaso-fefo').classList.remove('hidden')"
                         class="px-3.5 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
                     &uarr; Traspasar Bodega &rarr; Vitrina
                 </button>
-            @endif
 
-            <!-- 4. Botón Siempre Visible: Nuevo Producto al Catálogo (Q. Farmacéutico y Administrador) -->
-            @if($canManageMedications)
                 <button type="button"
-                        onclick="document.getElementById('modal-nuevo-medicamento').classList.remove('hidden')"
-                        class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
-                    <span>💊 + Nuevo Producto</span>
+                        onclick="openNuevaRemesaForMedication(null)"
+                        class="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+                    📦 + Ingresar Lote (Stock)
                 </button>
             @endif
 
-            <!-- 5. Retiro Vitrina -> Bodega -->
-            @if($canToggleLote)
+            @if($canManageMedications)
                 <button type="button"
-                        onclick="document.getElementById('modal-retiro-vitrina').classList.remove('hidden')"
-                        class="px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold shadow-2xs transition">
-                    &darr; Retirar a Bodega
+                        onclick="document.getElementById('modal-nuevo-medicamento').classList.remove('hidden')"
+                        class="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition">
+                    💊 + Nuevo Producto
                 </button>
             @endif
 
             @if(! $canManageStock && ! $canManageMedications)
                 <span class="px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold">
-                    🔒 Modo Consulta (Reposición de lotes reservada a Bodega / Admin)
+                    🔒 Modo Consulta
                 </span>
             @endif
         </div>
@@ -247,46 +87,27 @@
     <!-- ========================================================================= -->
     <!-- PESTAÑAS DE SEGREGACIÓN FÍSICA Y CATÁLOGO MAESTRO                         -->
     <!-- ========================================================================= -->
-    <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-2">
-            <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
-               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'VITRINA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-                🏪 Vitrina ({{ ($lotesVitrina ?? collect())->count() }} lotes)
-            </a>
-            <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}"
-               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BODEGA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-                📦 Bodega ({{ ($lotesBodega ?? collect())->count() }} lotes)
-            </a>
-            <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS']) }}"
-               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'TODOS' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-                📋 Todos los Lotes
-            </a>
-            <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO']) }}"
-               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'CATALOGO' ? 'bg-white border-blue-300 text-[#1E40AF] shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-                💊 Catálogo Maestro y Stock por Producto ({{ $medicamentosCatalogo->count() }})
-            </a>
-            <a href="{{ route('inventario.index', ['ubicacion' => 'BAJAS']) }}"
-               class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BAJAS' ? 'bg-red-50 border-red-300 text-red-800 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
-                🗑️ Bajas y Caducados ({{ $bajasCount ?? 0 }})
-            </a>
-        </div>
-
-        <!-- Atajo rápido para ordenar por stock con 1 clic -->
-        <div class="flex items-center gap-1.5 text-[11px]">
-            <span class="text-slate-500 font-semibold">Orden rápido:</span>
-            <button type="button"
-                    onclick="setQuickStockSort('stock_asc')"
-                    id="btn-quick-sort-asc"
-                    class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 text-slate-700 font-bold transition">
-                📉 Menor Stock primero &uarr;
-            </button>
-            <button type="button"
-                    onclick="setQuickStockSort('stock_desc')"
-                    id="btn-quick-sort-desc"
-                    class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 text-slate-700 font-bold transition">
-                📈 Mayor Stock primero &darr;
-            </button>
-        </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'VITRINA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            🏪 Vitrina ({{ ($lotesVitrina ?? collect())->count() }})
+        </a>
+        <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BODEGA' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            📦 Bodega ({{ ($lotesBodega ?? collect())->count() }})
+        </a>
+        <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'TODOS' ? 'bg-white border-slate-300 text-slate-900 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            📋 Todos los Lotes
+        </a>
+        <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'CATALOGO' ? 'bg-white border-blue-300 text-[#1E40AF] shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            💊 Catálogo y Stock por Producto ({{ $medicamentosCatalogo->count() }})
+        </a>
+        <a href="{{ route('inventario.index', ['ubicacion' => 'BAJAS']) }}"
+           class="px-4 py-2 rounded-lg text-xs font-bold border transition flex items-center gap-2 {{ $ubicacion === 'BAJAS' ? 'bg-red-50 border-red-300 text-red-800 shadow-sm' : 'bg-slate-100 border-transparent text-slate-500 hover:text-slate-800' }}">
+            🗑️ Bajas y Caducados ({{ $bajasCount ?? 0 }})
+        </a>
     </div>
 
     <!-- ========================================================================= -->
@@ -677,18 +498,9 @@
                 <span><strong>Registro de Bajas y Productos Caducados:</strong> Lotes retirados de Vitrina y Bodega por vencimiento, merma o alerta sanitaria.</span>
             </div>
         @else
-            <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div class="flex items-center gap-2">
-                    <span>⬇️</span>
-                    <span><strong>Control de Lotes Activos:</strong> Puedes ordenar por <strong>Cantidad de Stock (Menor/Mayor)</strong> o por <strong>Vencimiento FEFO</strong>. Pincha cualquier alerta de <em>Poco Stock</em> para añadir más unidades.</span>
-                </div>
-                @if($canManageStock)
-                    <button type="button"
-                            onclick="openNuevaRemesaForMedication(null)"
-                            class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shrink-0 transition">
-                        📦 + Ingresar Nuevo Lote
-                    </button>
-                @endif
+            <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex items-center gap-2">
+                <span>⬇️</span>
+                <span><strong>Control de Lotes Activos:</strong> Puedes ordenar por <strong>Cantidad de Stock</strong> o por <strong>Vencimiento FEFO</strong>. Pincha cualquier etiqueta de <em>Poco Stock</em> para añadir más unidades.</span>
             </div>
         @endif
 

@@ -731,7 +731,7 @@ class ExampleTest extends TestCase
             'reponer_med' => $lorazepam->id_medicamento,
         ]));
         $reponerResp->assertStatus(200);
-        $reponerResp->assertSee('Alerta de Stock Bajo y Quiebres en Vitrina');
+        $reponerResp->assertSee('Alertas de Control de Stock');
         $reponerResp->assertSee('+ Añadir Lote');
 
         // 4. Bodeguero abastece el medicamento con poco stock -> sube de 15 u. a 65 u. y sale de la alerta de poco stock
