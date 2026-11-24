@@ -129,9 +129,9 @@
                                 </div>
                                 <div>
                                     <label class="block font-bold text-[#EF4444] mb-1">PIN de Autorización Q.F.</label>
-                                    <input type="password" name="pin_qf" value="4421" required
+                                    <input type="password" name="pin_qf" required
                                            minlength="4" maxlength="6"
-                                           placeholder="Ingrese su PIN"
+                                           placeholder="••••"
                                            class="w-full px-3.5 py-2.5 rounded-lg border-2 border-red-300 bg-red-50/40 font-mono-code font-bold text-center focus:border-[#EF4444] outline-none">
                                 </div>
                             </div>

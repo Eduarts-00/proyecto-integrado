@@ -245,10 +245,6 @@
                 <span class="inline-flex items-center gap-1 font-medium">
                     Vista activa: <strong class="text-slate-800">{{ $ubicacion }}</strong>
                 </span>
-                <span class="text-slate-300">•</span>
-                <span class="text-[11px] text-slate-500">
-                    Tip: Haz clic en el encabezado <strong>"Cantidad / Stock ↕"</strong> de la tabla para ordenar de menor a mayor o de mayor a menor stock.
-                </span>
                 <button type="button"
                         id="btn-reset-inv-filters"
                         onclick="clearInventoryFilters()"
@@ -266,22 +262,6 @@
         <!-- ========================================================================= -->
         <!-- VISTA DE CATÁLOGO MAESTRO DE MEDICAMENTOS, STOCK CONSOLIDADO Y RECETAS    -->
         <!-- ========================================================================= -->
-        <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-900 text-xs font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <span>💊 <strong>Catálogo Maestro de Productos:</strong> Consulta el stock consolidado (Vitrina + Bodega), alertas de stock mínimo y condición de Receta Retenida ISP.</span>
-            <div class="flex flex-wrap items-center gap-2">
-                @if($canManageStock)
-                    <span class="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
-                        📦 Usa "+ Añadir Lote" en cualquier fila para abastecer ese producto directamente
-                    </span>
-                @endif
-                @if(! $canManageMedications)
-                    <span class="px-2.5 py-1 rounded-lg bg-white/80 border border-blue-200 text-slate-600 font-semibold text-[11px]">
-                        🔒 Creación/Edición de catálogo exclusiva Q. Farmacéutico y Administrador
-                    </span>
-                @endif
-            </div>
-        </div>
-
         <div id="tabla-lotes-fefo" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -496,11 +476,6 @@
             <div class="p-3 rounded-xl bg-red-50/90 border border-red-200 text-red-900 text-xs font-medium flex items-center gap-2">
                 <span>🗑️</span>
                 <span><strong>Registro de Bajas y Productos Caducados:</strong> Lotes retirados de Vitrina y Bodega por vencimiento, merma o alerta sanitaria.</span>
-            </div>
-        @else
-            <div class="p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-blue-800 text-xs font-medium flex items-center gap-2">
-                <span>⬇️</span>
-                <span><strong>Control de Lotes Activos:</strong> Puedes ordenar por <strong>Cantidad de Stock</strong> o por <strong>Vencimiento FEFO</strong>. Pincha cualquier etiqueta de <em>Poco Stock</em> para añadir más unidades.</span>
             </div>
         @endif
 

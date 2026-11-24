@@ -74,9 +74,9 @@
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">RUT Profesional</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">👤</span>
-                        <input type="text" name="rut" value="{{ old('rut', '12.345.678-5') }}" required
+                        <input type="text" name="rut" value="{{ old('rut') }}" required
                                minlength="3" maxlength="80"
-                               placeholder="12.345.678-5"
+                               placeholder="Ej: 12.345.678-5"
                                class="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-500/20 outline-none">
                     </div>
                 </div>
@@ -85,8 +85,9 @@
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Contraseña</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">🔑</span>
-                        <input type="password" name="password" value="Password123!" required
+                        <input type="password" name="password" required
                                minlength="4" maxlength="32"
+                               placeholder="••••••••"
                                class="w-full pl-9 pr-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:border-[#1E40AF] focus:ring-2 focus:ring-blue-500/20 outline-none">
                     </div>
                 </div>
@@ -136,7 +137,7 @@
             </div>
 
             <p class="mt-6 text-center text-[11px] text-slate-400">
-                FarmaNet Pro © 2026 • Reg. ISP #4421 • v2.4.1
+                FarmaNet Pro © 2026
             </p>
         </div>
     </div>
@@ -182,9 +183,6 @@
                            placeholder="••••"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
                            class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-[#1E40AF] font-mono font-extrabold text-xl tracking-[0.5em] text-center text-slate-900 outline-none">
-                    <p class="text-[10px] text-slate-400 text-center mt-1.5">
-                        PIN inicial por defecto: <strong class="font-mono text-slate-600">1234</strong>
-                    </p>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-1">

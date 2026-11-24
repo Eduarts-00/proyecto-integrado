@@ -210,11 +210,6 @@
                     @endforelse
                 </div>
             </div>
-
-            <div class="flex items-center justify-between text-[11px] text-slate-400 px-1">
-                <span>v2.4.1</span>
-                <span>ISP Reg. #4421</span>
-            </div>
         </div>
     </aside>
 
@@ -318,8 +313,6 @@
                     </a>
                 @endif
 
-                <span class="hidden sm:inline font-mono-code text-slate-400">ISP Reg. #4421</span>
-                <span class="hidden sm:inline text-slate-200">|</span>
                 <form action="{{ route('logout') }}" method="POST" class="inline">
                     @csrf
                     <button type="submit"
@@ -410,9 +403,6 @@
                            placeholder="••••"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
                            class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-[#1E40AF] font-mono-code font-extrabold text-xl tracking-[0.5em] text-center text-slate-900 outline-none">
-                    <p class="text-[10px] text-slate-400 text-center mt-1.5">
-                        PIN de terminal de 4 dígitos (Por defecto inicial: <strong class="font-mono-code text-slate-600">1234</strong>)
-                    </p>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-1">
