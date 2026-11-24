@@ -225,20 +225,23 @@
         <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Vencimientos FEFO e ISP</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
+                   class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
                     Riesgo: ${{ number_format($valorizacionRiesgoFefo, 0, ',', '.') }}
-                </span>
+                </a>
             </div>
             <div class="flex items-baseline justify-between">
-                <div class="text-2xl font-extrabold text-red-600 font-mono-code">
-                    {{ $lotesProxVencerCount }} <span class="text-xs font-bold text-slate-500">lotes ≤ 30d</span>
-                </div>
+                <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
+                   class="text-2xl font-extrabold text-red-600 hover:text-red-700 font-mono-code transition"
+                   title="Ver lotes próximos a vencer">
+                    {{ $lotesProxVencerCount }} <span class="text-xs font-bold text-slate-500 underline">lotes ≤ 30d</span>
+                </a>
                 <div class="text-xs font-semibold text-slate-600">
                     ISP: <strong class="text-emerald-700">{{ $ispAutorizadasCount }} aut.</strong> / <strong class="text-amber-700">{{ $ispPendientesCount }} pend.</strong>
                 </div>
             </div>
             <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}" class="text-red-700 font-bold hover:underline">Controlar lotes FEFO &rarr;</a>
+                <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo" class="text-red-700 font-bold hover:underline">Controlar lotes FEFO &rarr;</a>
                 <a href="{{ route('autorizaciones.index') }}" class="text-[#1E40AF] font-bold hover:underline">Bandeja Q.F. &rarr;</a>
             </div>
         </div>
@@ -516,11 +519,11 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-sm font-bold text-slate-900">Alertas Sanitarias FEFO (&le; 30 días)</h2>
-                    <p class="text-[11px] text-slate-400">Lotes que requieren rotación prioritaria o baja preventiva</p>
+                    <p class="text-[11px] text-slate-400">Pincha una alerta para ir directo al lote por vencer</p>
                 </div>
-                <a href="{{ route('inventario.index', ['ubicacion' => 'VITRINA']) }}"
+                <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
                    class="text-[11px] font-bold text-[#1E40AF] hover:underline">
-                    Gestionar lotes &rarr;
+                    Ver todos los por vencer &rarr;
                 </a>
             </div>
 
@@ -531,7 +534,8 @@
                         $isCrit = $dias < 20;
                         $valRiesgo = (int) round(($alerta->medicamento?->precio_unitario ?? 0) * $alerta->cantidad);
                     @endphp
-                    <div class="p-3 rounded-xl border {{ $isCrit ? 'bg-red-50/50 border-red-200' : 'bg-amber-50/60 border-amber-200' }} flex items-center justify-between gap-2">
+                    <a href="{{ route('inventario.index', ['ubicacion' => $alerta->ubicacion, 'fefo' => 'por_vencer', 'q' => $alerta->lote_codigo]) }}#tabla-lotes-fefo"
+                       class="block p-3 rounded-xl border transition {{ $isCrit ? 'bg-red-50/50 hover:bg-red-100/70 border-red-200 hover:border-red-300' : 'bg-amber-50/60 hover:bg-amber-100/70 border-amber-200 hover:border-amber-300' }} flex items-center justify-between gap-2">
                         <div class="min-w-0">
                             <div class="text-xs font-bold text-slate-900 truncate">{{ $alerta->medicamento?->nombre_comercial }}</div>
                             <div class="text-[11px] font-mono-code text-slate-500">
@@ -539,9 +543,9 @@
                             </div>
                         </div>
                         <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 {{ $isCrit ? 'bg-red-100 text-[#EF4444]' : 'bg-amber-100 text-amber-800' }}">
-                            {{ $dias }}d
+                            {{ $dias }}d &rarr;
                         </span>
-                    </div>
+                    </a>
                 @empty
                     <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
                         Sin lotes en riesgo crítico de vencimiento (&le; 30 días).
@@ -553,18 +557,19 @@
                 <div class="pt-3 border-t border-slate-100">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-bold text-amber-900">Reposición Urgente: Sin Vitrina pero con Bodega</span>
-                        <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}" class="text-[11px] font-bold text-[#1E40AF] hover:underline">
+                        <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}#tabla-lotes-fefo" class="text-[11px] font-bold text-[#1E40AF] hover:underline">
                             Traspasar a Vitrina &rarr;
                         </a>
                     </div>
                     <div class="space-y-1.5">
                         @foreach($quiebresConBodega->take(4) as $qb)
-                            <div class="px-3 py-2 rounded-lg bg-amber-50/70 border border-amber-200 flex items-center justify-between text-xs">
+                            <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA', 'q' => $qb->nombre_comercial]) }}#tabla-lotes-fefo"
+                               class="block px-3 py-2 rounded-lg bg-amber-50/70 hover:bg-amber-100/80 border border-amber-200 flex items-center justify-between text-xs transition">
                                 <span class="font-semibold text-slate-800 truncate">{{ $qb->nombre_comercial }}</span>
                                 <span class="font-mono-code text-[11px] font-bold text-amber-800 shrink-0">
-                                    Vitrina: 0 u. | Bodega: {{ $qb->stock_bodega }} u.
+                                    Vitrina: 0 u. | Bodega: {{ $qb->stock_bodega }} u. &rarr;
                                 </span>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
                 </div>

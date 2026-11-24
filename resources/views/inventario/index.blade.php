@@ -21,9 +21,14 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5">
-            <span class="px-3.5 py-2 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold flex items-center gap-1.5">
-                ⚠️ {{ $alertasFefo->count() }} lotes próx. a vencer
-            </span>
+            <a href="{{ route('inventario.index', ['ubicacion' => 'TODOS', 'fefo' => 'por_vencer']) }}#tabla-lotes-fefo"
+               id="btn-alerta-fefo-top"
+               onclick="return handleFefoAlertBadgeClick(event)"
+               title="Ver los {{ $alertasFefo->count() }} lotes próximos a vencer (≤ 30 días)"
+               class="px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer {{ ($fefo ?? '') === 'por_vencer' ? 'bg-amber-600 border-amber-700 text-white ring-2 ring-amber-300' : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800' }}">
+                <span>⚠️ {{ $alertasFefo->count() }} lotes próx. a vencer</span>
+                <span id="btn-alerta-fefo-action" class="text-[10px] underline ml-0.5">{{ ($fefo ?? '') === 'por_vencer' ? '(Ver todos)' : 'Ver →' }}</span>
+            </a>
 
             @if($ubicacion === 'CATALOGO')
                 @if($canManageMedications)
@@ -161,10 +166,11 @@
                     <select id="inv-filter-fefo"
                             onchange="filterInventoryTable()"
                             class="w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 focus:border-[#1E40AF] outline-none">
-                        <option value="">Todos los vencimientos FEFO</option>
-                        <option value="critico">● Crítico / Por vencer (≤ 30 días)</option>
-                        <option value="alerta">▲ Alerta preventiva (31 a 90 días)</option>
-                        <option value="optimo">✓ Vigencia óptima (&gt; 90 días)</option>
+                        <option value="" {{ ($fefo ?? '') === '' ? 'selected' : '' }}>Todos los vencimientos FEFO</option>
+                        <option value="por_vencer" {{ ($fefo ?? '') === 'por_vencer' ? 'selected' : '' }}>⚠️ Próximos a vencer (≤ 30 días — {{ $alertasFefo->count() }} lotes)</option>
+                        <option value="critico" {{ ($fefo ?? '') === 'critico' ? 'selected' : '' }}>● Crítico / Urgente (&lt; 20 días)</option>
+                        <option value="alerta" {{ ($fefo ?? '') === 'alerta' ? 'selected' : '' }}>▲ Alerta preventiva (20 a 30 días)</option>
+                        <option value="optimo" {{ ($fefo ?? '') === 'optimo' ? 'selected' : '' }}>✓ Vigencia óptima (&gt; 30 días)</option>
                     </select>
                 @endif
             </div>
@@ -337,7 +343,7 @@
         @endif
 
         <!-- Tabla Interactiva Clasificada por FEFO -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div id="tabla-lotes-fefo" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
@@ -1060,7 +1066,8 @@
 
             const matchesSearch = !q || name.includes(q) || sub.includes(q) || code.includes(q) || ean.includes(q) || lab.includes(q) || txt.includes(q);
             const matchesCond = !condVal || rowCond === condVal;
-            const matchesFefo = !fefoVal || rowFefo === fefoVal;
+            const matchesFefo = !fefoVal
+                || (fefoVal === 'por_vencer' ? (rowFefo === 'critico' || rowFefo === 'alerta') : rowFefo === fefoVal);
 
             if (matchesSearch && matchesCond && matchesFefo) {
                 tr.style.display = '';
@@ -1070,12 +1077,59 @@
             }
         });
 
+        const topFefoBtn = document.getElementById('btn-alerta-fefo-top');
+        const topFefoAction = document.getElementById('btn-alerta-fefo-action');
+        if (topFefoBtn && topFefoAction) {
+            const isFefoActive = fefoVal === 'por_vencer' || fefoVal === 'critico';
+            topFefoBtn.className = 'px-3.5 py-2 rounded-lg border text-xs font-bold flex items-center gap-1.5 shadow-2xs transition cursor-pointer ' +
+                (isFefoActive ? 'bg-amber-600 border-amber-700 text-white ring-2 ring-amber-300' : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800');
+            topFefoAction.textContent = isFefoActive ? '(Ver todos)' : 'Ver →';
+        }
+
         if (noResultsRow) {
             noResultsRow.classList.toggle('hidden', rows.length === 0 || visibleCount > 0);
         }
         if (counterEl) {
             counterEl.textContent = `Mostrando ${visibleCount} de ${rows.length} registros`;
         }
+    }
+
+    function handleFefoAlertBadgeClick(e) {
+        const ubicacionActual = "{{ $ubicacion }}";
+        const totalAlertasFefo = {{ $alertasFefo->count() }};
+        const fefoSelect = document.getElementById('inv-filter-fefo');
+        const searchInput = document.getElementById('inv-live-search');
+        const condSelect = document.getElementById('inv-filter-condicion');
+
+        if (ubicacionActual === 'CATALOGO' || ubicacionActual === 'BAJAS' || !fefoSelect) {
+            return true;
+        }
+
+        const expiringRowsInCurrentView = Array.from(document.querySelectorAll('tr.inv-filterable-row')).filter(tr => {
+            const rf = tr.getAttribute('data-fefo');
+            return rf === 'critico' || rf === 'alerta';
+        });
+
+        // Si en la pestaña actual no están todos los lotes por vencer, redirigir a TODOS con el filtro activo
+        if (expiringRowsInCurrentView.length < totalAlertasFefo && ubicacionActual !== 'TODOS') {
+            return true;
+        }
+
+        if (e) e.preventDefault();
+
+        const alreadyFiltering = fefoSelect.value === 'por_vencer';
+        if (searchInput) searchInput.value = '';
+        if (condSelect) condSelect.value = '';
+        fefoSelect.value = alreadyFiltering ? '' : 'por_vencer';
+
+        filterInventoryTable('');
+
+        const tableEl = document.getElementById('tabla-lotes-fefo');
+        if (tableEl) {
+            tableEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        return false;
     }
 
     function renderInventoryAutocomplete(rawQuery) {
@@ -1261,8 +1315,9 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         const input = document.getElementById('inv-live-search');
-        if (input && input.value.trim() !== '') {
-            filterInventoryTable(input.value);
+        const fefoSelect = document.getElementById('inv-filter-fefo');
+        if ((input && input.value.trim() !== '') || (fefoSelect && fefoSelect.value !== '')) {
+            filterInventoryTable(input ? input.value : '');
         }
 
         // Escucha Global de Pistola Lectora USB en Inventario (Keyboard Wedge < 45ms + Enter) y atajo F2
