@@ -313,7 +313,7 @@
                 </div>
             </div>
             <div>
-                <label class="block font-bold text-slate-700 mb-1">Nombre Completo (3 a 80 caracteres)</label>
+                <label class="block font-bold text-slate-700 mb-1">Nombre Completo</label>
                 <input type="text" name="nombre_completo" required placeholder="Ej: Dra. Camila Fuentes"
                        minlength="3" maxlength="80"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300">
@@ -326,14 +326,14 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Contraseña (8 a 32 caract.)</label>
-                    <input type="password" name="password" value="Password123!" required
+                    <label class="block font-bold text-slate-700 mb-1">Contraseña</label>
+                    <input type="password" name="password" required placeholder="••••••••"
                            minlength="8" maxlength="32"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">PIN Cambio Sesión (4 dígitos)</label>
-                    <input type="password" name="pin_acceso" value="1234" required
+                    <label class="block font-bold text-slate-700 mb-1">PIN Cambio Sesión</label>
+                    <input type="password" name="pin_acceso" required placeholder="••••"
                            inputmode="numeric" minlength="4" maxlength="4" pattern="^[0-9]{4}$"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code text-center font-bold">
@@ -347,8 +347,8 @@
                 </label>
             </div>
             <div id="contenedor-pin-qf" class="hidden p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas (4 a 6 dígitos)</label>
-                <input type="password" id="input-pin-qf" name="pin_qf" placeholder="Ingrese PIN de 4 a 6 dígitos (ej: 4421)" disabled
+                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas</label>
+                <input type="password" id="input-pin-qf" name="pin_qf" placeholder="••••" disabled
                        minlength="4" maxlength="6" pattern="^[0-9]{4,6}$"
                        class="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-white font-mono-code">
                 <p class="text-[11px] text-emerald-700">Requerido para autorizar la dispensación de recetas retenidas en el sistema.</p>
@@ -390,7 +390,7 @@
                 </div>
             </div>
             <div>
-                <label class="block font-bold text-slate-700 mb-1">Nombre Completo (3 a 80 caracteres)</label>
+                <label class="block font-bold text-slate-700 mb-1">Nombre Completo</label>
                 <input type="text" id="edit-nombre-completo" name="nombre_completo" required
                        minlength="3" maxlength="80"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300">
@@ -411,7 +411,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Nueva Contraseña (8 a 32 caract.)</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nueva Contraseña</label>
                     <input type="password" id="edit-password" name="password" placeholder="Dejar vacío para mantener"
                            minlength="8" maxlength="32"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
@@ -426,7 +426,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Nuevo PIN de Cambio de Sesión (4 dígitos)</label>
+                    <label class="block font-semibold text-slate-700 mb-1">Nuevo PIN de Cambio de Sesión</label>
                     <input type="password" id="edit-pin-acceso" name="pin_acceso"
                            inputmode="numeric" minlength="4" maxlength="4" pattern="^[0-9]{4}$"
                            oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
@@ -435,7 +435,7 @@
                 </div>
             </div>
             <div id="edit-contenedor-pin-qf" class="hidden p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas (4 a 6 dígitos)</label>
+                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas</label>
                 <input type="password" id="edit-input-pin-qf" name="pin_qf" placeholder="Ingrese nuevo PIN o deje vacío para mantener actual" disabled
                        minlength="4" maxlength="6" pattern="^[0-9]{4,6}$"
                        class="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-white font-mono-code">

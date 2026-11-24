@@ -146,7 +146,7 @@
 
                         <form action="{{ route('autorizaciones.reject', $selectedValidation->id_registro) }}" method="POST" class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs">
                             @csrf
-                            <input type="text" name="motivo_rechazo" required placeholder="Motivo de rechazo (4 a 120 caracteres)"
+                            <input type="text" name="motivo_rechazo" required placeholder="Motivo de rechazo..."
                                    minlength="4" maxlength="120"
                                    class="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-xs">
                             <button type="submit" class="px-3.5 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-[#EF4444] font-bold">

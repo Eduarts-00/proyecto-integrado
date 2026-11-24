@@ -233,7 +233,7 @@
             @csrf
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio (3 a 80 caract.)</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio</label>
                     <input type="text" name="nombre_convenio" required placeholder="Ej: Isapre Vida Tres"
                            minlength="3" maxlength="80"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
@@ -319,7 +319,7 @@
             @method('PUT')
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-2">
-                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio (3 a 80 caract.)</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre del Convenio</label>
                     <input type="text" id="edit-nombre-convenio" name="nombre_convenio" required
                            minlength="3" maxlength="80"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">

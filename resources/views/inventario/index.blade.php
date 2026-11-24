@@ -761,15 +761,15 @@
                 @csrf
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Nombre Comercial (3 a 100 caract.)</label>
+                        <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
                         <input type="text" id="nuevo-med-nombre" name="nombre_comercial" required placeholder="Ej: Zolpidem 10mg"
-                               minlength="3" maxlength="100"
+                               minlength="3" maxlength="60"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-[#1E40AF] outline-none">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Principio Activo / DCI (3 a 100 caract.)</label>
+                        <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
                         <input type="text" name="principio_activo" required placeholder="Ej: Zolpidem Tartrato"
-                               minlength="3" maxlength="100"
+                               minlength="3" maxlength="60"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-[#1E40AF] outline-none">
                     </div>
                 </div>
@@ -785,13 +785,13 @@
                             </button>
                         </div>
                         <input type="text" id="nuevo-med-ean" name="codigo_barras" value="78000010{{ rand(1120, 9999) }}" required
-                               minlength="6" maxlength="20"
+                               minlength="6" maxlength="14"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
                         <input type="text" name="laboratorio" list="datalist-laboratorios" required placeholder="Ej: Laboratorio Chile"
-                               minlength="2" maxlength="80"
+                               minlength="2" maxlength="50"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                         <datalist id="datalist-laboratorios">
                             <option value="Laboratorio Chile"></option>
@@ -807,7 +807,7 @@
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Categoría Terapéutica</label>
                         <input type="text" name="categoria" list="datalist-categorias" placeholder="Ej: Analgésico OTC"
-                               minlength="2" maxlength="60"
+                               minlength="2" maxlength="50"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                         <datalist id="datalist-categorias">
                             <option value="Analgésico OTC"></option>
@@ -824,14 +824,14 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Precio Venta ($ CLP)</label>
-                        <input type="number" name="precio_unitario" min="100" max="9999999" step="10" value="6990" required
+                        <input type="number" name="precio_unitario" min="100" max="999999" step="10" value="6990" required
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono-code font-bold">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1" title="Cuando el stock en vitrina sea igual o menor a este número, se activará la alerta de poco stock">
-                            Alerta Stock Mínimo (u.)
+                            Stock Mínimo (u.)
                         </label>
-                        <input type="number" name="stock_minimo" min="1" max="10000" value="25"
+                        <input type="number" name="stock_minimo" min="1" max="500" value="25"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white font-mono-code">
                     </div>
                     <div>
@@ -845,19 +845,19 @@
 
                 <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
                     <div class="flex items-center justify-between">
-                        <div class="font-bold text-emerald-950">📦 Primer Lote de Stock Inicial (Inmediato)</div>
-                        <span class="text-[10px] font-semibold text-emerald-700">Deja cantidad en 0 si aún no ingresa stock físico</span>
+                        <div class="font-bold text-emerald-950">📦 Primer Lote de Stock Inicial</div>
+                        <span class="text-[10px] font-semibold text-emerald-700">Opcional (0 a 1.000 u.)</span>
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">Cantidad Inicial</label>
-                            <input type="number" name="cantidad_inicial" min="0" max="100000" value="50"
-                                   class="w-full px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-white font-mono-code font-bold">
+                            <input type="number" name="cantidad_inicial" min="0" max="1000" value="50"
+                                    class="w-full px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-white font-mono-code font-bold">
                         </div>
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">Código Lote</label>
                             <input type="text" name="lote_codigo" value="LOT-2026-{{ rand(300, 999) }}"
-                                   minlength="4" maxlength="25"
+                                   minlength="4" maxlength="20"
                                    class="w-full px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-white font-mono-code">
                         </div>
                         <div>
@@ -898,34 +898,34 @@
                 @csrf
                 @method('PUT')
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Nombre Comercial (3 a 100 caract.)</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nombre Comercial</label>
                     <input type="text" id="edit-med-nombre" name="nombre_comercial" required
-                           minlength="3" maxlength="100"
+                           minlength="3" maxlength="60"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Principio Activo (3 a 100 caract.)</label>
+                        <label class="block font-bold text-slate-700 mb-1">Principio Activo</label>
                         <input type="text" id="edit-med-principio" name="principio_activo" required
-                               minlength="3" maxlength="100"
+                               minlength="3" maxlength="60"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Laboratorio (2 a 80 caract.)</label>
+                        <label class="block font-bold text-slate-700 mb-1">Laboratorio</label>
                         <input type="text" id="edit-med-laboratorio" name="laboratorio" required
-                               minlength="2" maxlength="80"
+                               minlength="2" maxlength="50"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300">
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-2.5">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Precio Venta ($)</label>
-                        <input type="number" id="edit-med-precio" name="precio_unitario" min="1" max="9999999" step="1" required
+                        <input type="number" id="edit-med-precio" name="precio_unitario" min="1" max="999999" step="1" required
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">Stock Mínimo</label>
-                        <input type="number" id="edit-med-stock-min" name="stock_minimo" min="1" max="10000" value="25"
+                        <input type="number" id="edit-med-stock-min" name="stock_minimo" min="1" max="500" value="25"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
@@ -1302,7 +1302,7 @@
                             </button>
                         </div>
                         <input type="text" id="remesa-lote-codigo" name="lote_codigo" value="LOT-2026-{{ rand(300, 999) }}" required
-                               minlength="4" maxlength="25"
+                               minlength="4" maxlength="20"
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                     </div>
                     <div>
@@ -1328,7 +1328,7 @@
                                 @endforeach
                             </div>
                         </div>
-                        <input type="number" id="remesa-cantidad" name="cantidad" min="1" max="100000" value="50" required
+                        <input type="number" id="remesa-cantidad" name="cantidad" min="1" max="1000" value="50" required
                                class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code font-bold text-sm">
                     </div>
                     <div>

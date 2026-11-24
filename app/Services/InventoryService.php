@@ -15,9 +15,9 @@ use RuntimeException;
  */
 class InventoryService
 {
-    public const MAX_PRECIO_UNITARIO = 9999999;
+    public const MAX_PRECIO_UNITARIO = 999999;
 
-    public const MAX_CANTIDAD_LOTE = 100000;
+    public const MAX_CANTIDAD_LOTE = 1000;
 
     /**
      * Retorna el lote disponible con fecha de vencimiento más próxima (FEFO).
@@ -105,7 +105,7 @@ class InventoryService
     {
         $cantidad = (int) ($data['cantidad'] ?? 0);
         if ($cantidad < 1 || $cantidad > self::MAX_CANTIDAD_LOTE) {
-            throw new RuntimeException('La cantidad del lote excede los límites permitidos (1 a 100.000 unidades).', 422);
+            throw new RuntimeException('La cantidad del lote excede el límite estándar de farmacia (1 a 1.000 unidades).', 422);
         }
 
         return DB::transaction(function () use ($data, $cantidad) {
@@ -271,7 +271,7 @@ class InventoryService
                 ? trim((string) $data['categoria'])
                 : ($esRestringido ? 'Controlado (Receta Retenida ISP)' : 'Venta Directa');
 
-            $stockMinimo = isset($data['stock_minimo']) ? min(10000, max(1, (int) $data['stock_minimo'])) : 25;
+            $stockMinimo = isset($data['stock_minimo']) ? min(500, max(1, (int) $data['stock_minimo'])) : 25;
 
             $medicamento = Medication::create([
                 'codigo_barras' => trim((string) $data['codigo_barras']),
@@ -320,7 +320,7 @@ class InventoryService
             $esRestringido = ($data['condicion_receta'] ?? '') === 'receta_retenida';
 
             $stockMinimo = isset($data['stock_minimo']) && $data['stock_minimo'] !== ''
-                ? min(10000, max(1, (int) $data['stock_minimo']))
+                ? min(500, max(1, (int) $data['stock_minimo']))
                 : ($medicamento->stock_minimo ?: 25);
 
             $medicamento->update([
