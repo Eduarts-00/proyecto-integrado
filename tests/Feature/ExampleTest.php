@@ -667,4 +667,86 @@ class ExampleTest extends TestCase
         $newPinResp->assertRedirect(route('pos.index'));
         $this->assertEquals($vendedor->id_usuario, auth()->id());
     }
+
+    /**
+     * Inventario Avanzado: Ordenamiento por Cantidad de Stock, Alertas de Poco Stock y Permisos de Reposición:
+     * 1. Ordena lotes y catálogo de menor a mayor stock (stock_asc) y de mayor a menor (stock_desc).
+     * 2. Detecta medicamentos con poco stock o agotados en vitrina y los expone en el panel interactivo.
+     * 3. Los botones de "+ Ingresar Lote (Stock)" y "+ Nuevo Producto" son visibles en todas las pestañas según el rol.
+     * 4. Respeta estrictamente los permisos RBAC al intentar añadir stock a un medicamento con alerta.
+     */
+    public function test_inventario_ordenamiento_por_stock_alertas_de_poco_stock_y_permisos_de_reposicion(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $admin = User::where('rut', '10.111.222-3')->firstOrFail();
+        $bodeguero = User::where('rut', '15.432.876-5')->firstOrFail();
+        $vendedor = User::where('rut', '12.345.678-5')->firstOrFail();
+
+        // 1. Verificar ordenamiento ascendente por cantidad de stock en Vitrina (menor stock primero: Lorazepam 15 u.)
+        $ascResp = $this->actingAs($admin)->get(route('inventario.index', [
+            'ubicacion' => 'VITRINA',
+            'orden' => 'stock_asc',
+        ]));
+        $ascResp->assertStatus(200);
+        $ascResp->assertSee('+ Ingresar Lote (Stock)');
+        $ascResp->assertSee('+ Nuevo Producto');
+        $ascResp->assertViewHas('lotes', function ($lotes) {
+            return $lotes->first()->cantidad <= $lotes->last()->cantidad;
+        });
+
+        // 2. Verificar ordenamiento descendente por cantidad de stock (mayor stock primero)
+        $descResp = $this->actingAs($admin)->get(route('inventario.index', [
+            'ubicacion' => 'VITRINA',
+            'orden' => 'stock_desc',
+        ]));
+        $descResp->assertStatus(200);
+        $descResp->assertViewHas('lotes', function ($lotes) {
+            return $lotes->first()->cantidad >= $lotes->last()->cantidad;
+        });
+
+        // 3. Verificar alertas de poco stock y enlace directo de reposición (?reponer_med=ID)
+        $lorazepam = Medication::where('codigo_barras', '780000100105')->firstOrFail(); // 15 u. en Vitrina (<= 25)
+        $this->assertTrue($lorazepam->tiene_stock_bajo);
+
+        $reponerResp = $this->actingAs($bodeguero)->get(route('inventario.index', [
+            'ubicacion' => 'VITRINA',
+            'stock' => 'bajo',
+            'reponer_med' => $lorazepam->id_medicamento,
+        ]));
+        $reponerResp->assertStatus(200);
+        $reponerResp->assertSee('Alerta de Stock Bajo y Quiebres en Vitrina');
+        $reponerResp->assertSee('+ Añadir Lote');
+
+        // 4. Bodeguero abastece el medicamento con poco stock -> sube de 15 u. a 65 u. y sale de la alerta de poco stock
+        $addStockResp = $this->actingAs($bodeguero)->post(route('inventario.register'), [
+            'id_medicamento' => $lorazepam->id_medicamento,
+            'lote_codigo' => 'LOT-REP-2026',
+            'ubicacion' => 'VITRINA',
+            'cantidad' => 50,
+            'fecha_vencimiento' => now()->addMonths(10)->toDateString(),
+        ]);
+        $addStockResp->assertRedirect(route('inventario.index', ['ubicacion' => 'VITRINA']));
+        $this->assertEquals(65, $lorazepam->fresh()->stock_vitrina);
+        $this->assertFalse($lorazepam->fresh()->tiene_stock_bajo);
+
+        // 5. Vendedor puede consultar alertas y ordenar por stock, pero no ve botones de ingreso de lotes ni puede registrar remesas (403)
+        $vendView = $this->actingAs($vendedor)->get(route('inventario.index', [
+            'ubicacion' => 'VITRINA',
+            'stock' => 'bajo',
+            'orden' => 'stock_asc',
+        ]));
+        $vendView->assertStatus(200);
+        $vendView->assertDontSee('+ Ingresar Lote (Stock)');
+        $vendView->assertSee('Modo Consulta');
+
+        $vendPost = $this->actingAs($vendedor)->post(route('inventario.register'), [
+            'id_medicamento' => $lorazepam->id_medicamento,
+            'lote_codigo' => 'LOT-NO-AUT',
+            'ubicacion' => 'VITRINA',
+            'cantidad' => 20,
+            'fecha_vencimiento' => now()->addMonths(6)->toDateString(),
+        ]);
+        $vendPost->assertStatus(403);
+    }
 }

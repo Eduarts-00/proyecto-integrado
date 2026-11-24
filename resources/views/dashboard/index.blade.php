@@ -217,7 +217,7 @@
             </div>
             <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                 <span>Con respaldo en Bodega: <strong class="text-amber-700">{{ $quiebresConBodega->count() }} disponibles</strong></span>
-                <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}" class="text-[#1E40AF] font-bold hover:underline">Abastecer &rarr;</a>
+                <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#tabla-lotes-fefo" class="text-[#1E40AF] font-bold hover:underline">Abastecer &rarr;</a>
             </div>
         </div>
 
@@ -557,13 +557,13 @@
                 <div class="pt-3 border-t border-slate-100">
                     <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-bold text-amber-900">Reposición Urgente: Sin Vitrina pero con Bodega</span>
-                        <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA']) }}#tabla-lotes-fefo" class="text-[11px] font-bold text-[#1E40AF] hover:underline">
-                            Traspasar a Vitrina &rarr;
+                        <a href="{{ route('inventario.index', ['ubicacion' => 'CATALOGO', 'stock' => 'bajo', 'orden' => 'stock_asc']) }}#tabla-lotes-fefo" class="text-[11px] font-bold text-[#1E40AF] hover:underline">
+                            Ver todos con poco stock &rarr;
                         </a>
                     </div>
                     <div class="space-y-1.5">
                         @foreach($quiebresConBodega->take(4) as $qb)
-                            <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA', 'q' => $qb->nombre_comercial]) }}#tabla-lotes-fefo"
+                            <a href="{{ route('inventario.index', ['ubicacion' => 'BODEGA', 'q' => $qb->nombre_comercial, 'reponer_med' => $qb->id_medicamento]) }}#tabla-lotes-fefo"
                                class="block px-3 py-2 rounded-lg bg-amber-50/70 hover:bg-amber-100/80 border border-amber-200 flex items-center justify-between text-xs transition">
                                 <span class="font-semibold text-slate-800 truncate">{{ $qb->nombre_comercial }}</span>
                                 <span class="font-mono-code text-[11px] font-bold text-amber-800 shrink-0">

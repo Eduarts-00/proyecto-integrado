@@ -86,4 +86,44 @@ class Medication extends Model
             ->whereDate('fecha_vencimiento', '>', now()->toDateString())
             ->sum('cantidad');
     }
+
+    public function getStockTotalAttribute(): int
+    {
+        return $this->stock_vitrina + $this->stock_bodega;
+    }
+
+    public function getUmbralStockBajoAttribute(): int
+    {
+        return max(15, (int) ($this->stock_minimo ?: 25));
+    }
+
+    public function getTieneStockBajoAttribute(): bool
+    {
+        if (! $this->activo) {
+            return false;
+        }
+
+        return $this->stock_vitrina <= $this->umbral_stock_bajo;
+    }
+
+    public function getNivelStockAttribute(): string
+    {
+        $vitrina = $this->stock_vitrina;
+        $bodega = $this->stock_bodega;
+        $umbral = $this->umbral_stock_bajo;
+
+        if ($vitrina <= 0 && $bodega <= 0) {
+            return 'agotado';
+        }
+
+        if ($vitrina <= 0 && $bodega > 0) {
+            return 'sin_vitrina';
+        }
+
+        if ($vitrina <= $umbral) {
+            return 'bajo';
+        }
+
+        return 'optimo';
+    }
 }

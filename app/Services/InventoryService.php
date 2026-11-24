@@ -271,6 +271,8 @@ class InventoryService
                 ? trim((string) $data['categoria'])
                 : ($esRestringido ? 'Controlado (Receta Retenida ISP)' : 'Venta Directa');
 
+            $stockMinimo = isset($data['stock_minimo']) ? min(10000, max(1, (int) $data['stock_minimo'])) : 25;
+
             $medicamento = Medication::create([
                 'codigo_barras' => trim((string) $data['codigo_barras']),
                 'nombre_comercial' => trim((string) $data['nombre_comercial']),
@@ -280,6 +282,7 @@ class InventoryService
                 'precio_unitario' => round($precio, 2),
                 'requiere_receta' => $esRestringido,
                 'tipo_controlado' => $esRestringido,
+                'stock_minimo' => $stockMinimo,
                 'activo' => true,
             ]);
 
@@ -316,6 +319,10 @@ class InventoryService
             $medicamento = Medication::lockForUpdate()->findOrFail($idMedicamento);
             $esRestringido = ($data['condicion_receta'] ?? '') === 'receta_retenida';
 
+            $stockMinimo = isset($data['stock_minimo']) && $data['stock_minimo'] !== ''
+                ? min(10000, max(1, (int) $data['stock_minimo']))
+                : ($medicamento->stock_minimo ?: 25);
+
             $medicamento->update([
                 'nombre_comercial' => trim((string) $data['nombre_comercial']),
                 'principio_activo' => trim((string) $data['principio_activo']),
@@ -324,6 +331,7 @@ class InventoryService
                 'precio_unitario' => round($precio, 2),
                 'requiere_receta' => $esRestringido,
                 'tipo_controlado' => $esRestringido,
+                'stock_minimo' => $stockMinimo,
                 'activo' => (bool) $data['activo'],
             ]);
 
@@ -362,5 +370,23 @@ class InventoryService
             ->whereDate('fecha_vencimiento', '<=', $limite)
             ->orderBy('fecha_vencimiento', 'asc')
             ->get();
+    }
+
+    /**
+     * Obtiene los medicamentos activos con stock bajo o agotado en Vitrina (<= umbral_stock_bajo),
+     * ordenados de menor a mayor disponibilidad en Vitrina para priorizar su reposición.
+     */
+    public function checkLowStockAlerts(): \Illuminate\Support\Collection
+    {
+        return Medication::with('lotes')
+            ->where('activo', true)
+            ->get()
+            ->filter(fn (Medication $m) => $m->tiene_stock_bajo)
+            ->sortBy([
+                fn (Medication $a, Medication $b) => $a->stock_vitrina <=> $b->stock_vitrina,
+                fn (Medication $a, Medication $b) => $a->stock_total <=> $b->stock_total,
+                fn (Medication $a, Medication $b) => strcmp($a->nombre_comercial, $b->nombre_comercial),
+            ])
+            ->values();
     }
 }

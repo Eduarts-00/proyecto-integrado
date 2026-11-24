@@ -28,6 +28,18 @@ class InventoryController extends Controller
             $fefo = '';
         }
 
+        $stockFilter = strtolower(trim((string) $request->query('stock', '')));
+        if (! in_array($stockFilter, ['', 'bajo', 'optimo'], true)) {
+            $stockFilter = '';
+        }
+
+        $orden = strtolower(trim((string) $request->query('orden', '')));
+        if (! in_array($orden, ['', 'fefo_asc', 'stock_asc', 'stock_desc', 'nombre_asc', 'precio_desc'], true)) {
+            $orden = '';
+        }
+
+        $reponerMedId = max(0, (int) $request->query('reponer_med', 0));
+
         $query = Batch::with('medicamento')
             ->where('cantidad', '>', 0);
 
@@ -37,9 +49,15 @@ class InventoryController extends Controller
                     ->orWhereDate('fecha_vencimiento', '<=', now()->toDateString());
             })->orderByDesc('fecha_baja')->orderBy('fecha_vencimiento', 'asc');
         } else {
-            $query->where('activo', true)
-                ->orderBy('fecha_vencimiento', 'asc')
-                ->orderBy('id_lote', 'asc');
+            $query->where('activo', true);
+
+            if ($orden === 'stock_asc') {
+                $query->orderBy('cantidad', 'asc')->orderBy('fecha_vencimiento', 'asc');
+            } elseif ($orden === 'stock_desc') {
+                $query->orderBy('cantidad', 'desc')->orderBy('fecha_vencimiento', 'asc');
+            } else {
+                $query->orderBy('fecha_vencimiento', 'asc')->orderBy('id_lote', 'asc');
+            }
 
             if (in_array($ubicacion, ['VITRINA', 'BODEGA'], true)) {
                 $query->where('ubicacion', $ubicacion);
@@ -47,6 +65,13 @@ class InventoryController extends Controller
         }
 
         $lotes = $query->get();
+
+        if ($orden === 'nombre_asc') {
+            $lotes = $lotes->sortBy(fn (Batch $b) => strtolower((string) $b->medicamento?->nombre_comercial))->values();
+        } elseif ($orden === 'precio_desc') {
+            $lotes = $lotes->sortByDesc(fn (Batch $b) => (float) ($b->medicamento?->precio_unitario ?? 0))->values();
+        }
+
         $bajasCount = Batch::where('cantidad', '>', 0)
             ->where(function ($q) {
                 $q->where('activo', false)
@@ -54,6 +79,8 @@ class InventoryController extends Controller
             })->count();
 
         $alertasFefo = $this->inventoryService->checkExpiryAlerts(30);
+        $alertasStockBajo = $this->inventoryService->checkLowStockAlerts();
+
         $lotesBodega = Batch::with('medicamento')
             ->where('activo', true)
             ->where('ubicacion', 'BODEGA')
@@ -68,16 +95,34 @@ class InventoryController extends Controller
             ->orderBy('fecha_vencimiento', 'asc')
             ->get();
 
-        $medicamentos = Medication::where('activo', true)->orderBy('nombre_comercial')->get();
+        $medicamentos = Medication::with('lotes')->where('activo', true)->orderBy('nombre_comercial')->get();
         $medicamentosCatalogo = Medication::with('lotes')->orderByDesc('activo')->orderBy('nombre_comercial')->get();
+
+        if ($orden === 'stock_asc') {
+            $medicamentosCatalogo = $medicamentosCatalogo->sortBy([
+                fn (Medication $a, Medication $b) => $a->stock_vitrina <=> $b->stock_vitrina,
+                fn (Medication $a, Medication $b) => $a->stock_total <=> $b->stock_total,
+            ])->values();
+        } elseif ($orden === 'stock_desc') {
+            $medicamentosCatalogo = $medicamentosCatalogo->sortBy([
+                fn (Medication $a, Medication $b) => $b->stock_total <=> $a->stock_total,
+                fn (Medication $a, Medication $b) => $b->stock_vitrina <=> $a->stock_vitrina,
+            ])->values();
+        } elseif ($orden === 'precio_desc') {
+            $medicamentosCatalogo = $medicamentosCatalogo->sortByDesc(fn (Medication $m) => (float) $m->precio_unitario)->values();
+        }
 
         return view('inventario.index', compact(
             'lotes',
             'ubicacion',
             'search',
             'fefo',
+            'stockFilter',
+            'orden',
+            'reponerMedId',
             'bajasCount',
             'alertasFefo',
+            'alertasStockBajo',
             'lotesBodega',
             'lotesVitrina',
             'medicamentos',
@@ -246,6 +291,7 @@ class InventoryController extends Controller
             'laboratorio' => ['required', 'string', 'min:2', 'max:80'],
             'categoria' => ['nullable', 'string', 'min:2', 'max:60'],
             'precio_unitario' => ['required', 'numeric', 'min:1', 'max:' . InventoryService::MAX_PRECIO_UNITARIO],
+            'stock_minimo' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
             'cantidad_inicial' => ['nullable', 'integer', 'min:0', 'max:' . InventoryService::MAX_CANTIDAD_LOTE],
             'lote_codigo' => ['nullable', 'string', 'min:4', 'max:25', 'regex:/^[A-Za-z0-9\-_]+$/'],
@@ -289,6 +335,7 @@ class InventoryController extends Controller
             'laboratorio' => ['required', 'string', 'min:2', 'max:80'],
             'categoria' => ['nullable', 'string', 'min:2', 'max:60'],
             'precio_unitario' => ['required', 'numeric', 'min:1', 'max:' . InventoryService::MAX_PRECIO_UNITARIO],
+            'stock_minimo' => ['nullable', 'integer', 'min:1', 'max:10000'],
             'condicion_receta' => ['required', 'in:venta_libre,receta_retenida'],
             'activo' => ['required', 'boolean'],
         ]);
