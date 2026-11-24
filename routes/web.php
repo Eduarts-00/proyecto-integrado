@@ -82,12 +82,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('dashboard.export.pdf');
         Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('dashboard.export.excel');
 
-        // HU-05: Mantenedor de Usuarios RBAC y Auditoría Forense NoSQL
+        // HU-05: Mantenedor de Usuarios RBAC, Configuración de Cambio Rápido por PIN y Auditoría Forense NoSQL
         Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
         Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
+        Route::post('/usuarios/acceso-rapido', [UserController::class, 'updateQuickAccessList'])->name('usuarios.update_quick_access_list');
         Route::put('/usuarios/{idUsuario}', [UserController::class, 'update'])->name('usuarios.update');
         Route::put('/usuarios/{idUsuario}/rol', [UserController::class, 'updateRole'])->name('usuarios.update_role');
         Route::patch('/usuarios/{idUsuario}/estado', [UserController::class, 'toggleStatus'])->name('usuarios.toggle_status');
+        Route::patch('/usuarios/{idUsuario}/acceso-rapido', [UserController::class, 'toggleQuickAccess'])->name('usuarios.toggle_quick_access');
     });
 });
 

@@ -43,13 +43,15 @@ class DatabaseSeeder extends Seeder
             'descripcion' => 'Dashboard gerencial, gestión de convenios, usuarios RBAC y auditoría forense.',
         ]);
 
-        // 2. Usuarios Institucionales (Pantalla 1 - Acceso Rápido por Rol)
+        // 2. Usuarios Institucionales (Pantalla 1 - Acceso Rápido de Terminal con PIN de 4 dígitos)
         $vendedor = User::create([
             'id_rol' => $rolVendedor->id_rol,
             'rut' => '12.345.678-5',
             'nombre_completo' => 'Ana Torres',
             'email' => 'ana.torres@farmanet.cl',
             'password_hash' => Hash::make('Password123!'),
+            'acceso_rapido' => true,
+            'pin_acceso' => Hash::make('1234'),
             'activo' => true,
         ]);
 
@@ -60,6 +62,8 @@ class DatabaseSeeder extends Seeder
             'email' => 'carlos.vega@farmanet.cl',
             'password_hash' => Hash::make('Password123!'),
             'pin_qf' => Hash::make('4421'),
+            'acceso_rapido' => true,
+            'pin_acceso' => Hash::make('1234'),
             'activo' => true,
         ]);
 
@@ -69,6 +73,8 @@ class DatabaseSeeder extends Seeder
             'nombre_completo' => 'Luis Pinto',
             'email' => 'luis.pinto@farmanet.cl',
             'password_hash' => Hash::make('Password123!'),
+            'acceso_rapido' => true,
+            'pin_acceso' => Hash::make('1234'),
             'activo' => true,
         ]);
 
@@ -78,6 +84,8 @@ class DatabaseSeeder extends Seeder
             'nombre_completo' => 'María Salinas',
             'email' => 'maria.salinas@farmanet.cl',
             'password_hash' => Hash::make('Password123!'),
+            'acceso_rapido' => true,
+            'pin_acceso' => Hash::make('1234'),
             'activo' => true,
         ]);
 

@@ -22,12 +22,15 @@ class User extends Authenticatable
         'email',
         'password_hash',
         'pin_qf',
+        'acceso_rapido',
+        'pin_acceso',
         'activo',
     ];
 
     protected $hidden = [
         'password_hash',
         'pin_qf',
+        'pin_acceso',
         'remember_token',
     ];
 
@@ -35,6 +38,7 @@ class User extends Authenticatable
     {
         return [
             'activo' => 'boolean',
+            'acceso_rapido' => 'boolean',
         ];
     }
 

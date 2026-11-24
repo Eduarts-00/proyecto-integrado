@@ -97,44 +97,41 @@
                 </button>
             </form>
 
-            <!-- Selección Rápida por Rol -->
+            <!-- Selección Rápida de Operador Designado (Protegida con PIN de 4 dígitos) -->
             <div class="mt-8 pt-6 border-t border-slate-200">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
-                    Acceso Rápido por Perfil
-                </p>
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        Cambio Rápido de Operador (PIN 4 Dígitos)
+                    </p>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500 font-mono text-[10px]">Terminal POS</span>
+                </div>
+
+                @php
+                    $colorMap = [
+                        'vendedor' => 'border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-700',
+                        'quimico_farmaceutico' => 'border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/80 text-emerald-700',
+                        'bodeguero' => 'border-amber-200 bg-amber-50/60 hover:bg-amber-100/80 text-amber-800',
+                        'administrador' => 'border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 text-purple-700',
+                    ];
+                @endphp
 
                 <div class="space-y-2">
-                    <form action="{{ route('login.demo', 'vendedor') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-700 text-xs font-semibold flex items-center justify-between transition">
-                            <span>Vendedor — Ana Torres</span>
-                            <span class="text-[10px] font-normal text-blue-500">Ingresar →</span>
+                    @forelse($quickAccessUsers ?? [] as $qUser)
+                        <button type="button"
+                                onclick="openLoginPinModal({{ json_encode([
+                                    'id_usuario' => $qUser->id_usuario,
+                                    'nombre_completo' => $qUser->nombre_completo,
+                                    'rut' => $qUser->rut,
+                                    'role_label' => $qUser->role_label,
+                                    'action_url' => route('login.demo', $qUser->id_usuario),
+                                ]) }})"
+                                class="w-full text-left px-3.5 py-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between transition {{ $colorMap[$qUser->role] ?? 'border-slate-200 bg-slate-50 text-slate-700' }}">
+                            <span>{{ $qUser->role_label }} — {{ $qUser->nombre_completo }}</span>
+                            <span class="text-[10px] font-normal opacity-80">PIN 4 dígitos →</span>
                         </button>
-                    </form>
-
-                    <form action="{{ route('login.demo', 'quimico_farmaceutico') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/80 text-emerald-700 text-xs font-semibold flex items-center justify-between transition">
-                            <span>Q. Farmacéutico — Dr. Carlos Vega</span>
-                            <span class="text-[10px] font-normal text-emerald-600">Ingresar →</span>
-                        </button>
-                    </form>
-
-                    <form action="{{ route('login.demo', 'bodeguero') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-amber-200 bg-amber-50/60 hover:bg-amber-100/80 text-amber-800 text-xs font-semibold flex items-center justify-between transition">
-                            <span>Bodeguero — Luis Pinto</span>
-                            <span class="text-[10px] font-normal text-amber-600">Ingresar →</span>
-                        </button>
-                    </form>
-
-                    <form action="{{ route('login.demo', 'administrador') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-3.5 py-2.5 rounded-lg border border-purple-200 bg-purple-50/60 hover:bg-purple-100/80 text-purple-700 text-xs font-semibold flex items-center justify-between transition">
-                            <span>Administrador — María Salinas</span>
-                            <span class="text-[10px] font-normal text-purple-600">Ingresar →</span>
-                        </button>
-                    </form>
+                    @empty
+                        <p class="text-xs text-slate-400 text-center py-2">No hay operadores designados en acceso rápido.</p>
+                    @endforelse
                 </div>
             </div>
 
@@ -144,5 +141,88 @@
         </div>
     </div>
 
+    <!-- Modal de Verificación de PIN de 4 dígitos en Login -->
+    <div id="modal-login-pin" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl overflow-hidden">
+            <div class="bg-[#0F172A] text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-sm">Acceso Rápido de Operador</h3>
+                    <p class="text-[11px] text-slate-400">Ingrese su PIN de 4 dígitos</p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-login-pin').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
+            <form id="form-login-pin" method="POST" class="p-5 space-y-4 text-xs">
+                @csrf
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+                    <div id="login-pin-avatar" class="w-10 h-10 rounded-full bg-[#1E40AF] text-white font-extrabold text-sm flex items-center justify-center uppercase shrink-0">
+                        U
+                    </div>
+                    <div class="min-w-0">
+                        <div id="login-pin-nombre" class="font-bold text-slate-900 text-sm truncate">Funcionario</div>
+                        <div class="text-[11px] text-slate-500">
+                            <span id="login-pin-rol" class="font-semibold text-[#1E40AF]">Cargo</span> •
+                            <span id="login-pin-rut" class="font-mono">RUN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="input-login-pin-acceso" class="block font-bold text-slate-700 mb-1.5 text-center">
+                        PIN de Seguridad (4 dígitos)
+                    </label>
+                    <input type="password"
+                           id="input-login-pin-acceso"
+                           name="pin_acceso"
+                           inputmode="numeric"
+                           minlength="4"
+                           maxlength="4"
+                           pattern="^[0-9]{4}$"
+                           required
+                           autocomplete="off"
+                           placeholder="••••"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
+                           class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-[#1E40AF] font-mono font-extrabold text-xl tracking-[0.5em] text-center text-slate-900 outline-none">
+                    <p class="text-[10px] text-slate-400 text-center mt-1.5">
+                        PIN inicial por defecto: <strong class="font-mono text-slate-600">1234</strong>
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button"
+                            onclick="document.getElementById('modal-login-pin').classList.add('hidden')"
+                            class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 font-semibold">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white font-bold shadow-sm transition">
+                        Ingresar con PIN
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openLoginPinModal(user) {
+            const modal = document.getElementById('modal-login-pin');
+            const form = document.getElementById('form-login-pin');
+            const pinInput = document.getElementById('input-login-pin-acceso');
+            if (!modal || !form) return;
+
+            form.action = user.action_url;
+            document.getElementById('login-pin-nombre').textContent = user.nombre_completo || '';
+            document.getElementById('login-pin-rol').textContent = user.role_label || '';
+            document.getElementById('login-pin-rut').textContent = user.rut || '';
+            document.getElementById('login-pin-avatar').textContent = (user.nombre_completo || 'U').charAt(0).toUpperCase();
+
+            if (pinInput) {
+                pinInput.value = '';
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                if (pinInput) pinInput.focus();
+            }, 60);
+        }
+    </script>
 </body>
 </html>

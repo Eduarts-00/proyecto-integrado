@@ -10,62 +10,97 @@
         <div>
             <h1 class="text-xl font-bold text-slate-900">Gestión de Usuarios y Registro de Actividad</h1>
             <p class="text-xs text-slate-500 mt-0.5">
-                Administración de cuentas del personal de la farmacia, asignación de cargos y bitácora del sistema.
+                Administración de cuentas del personal, designación de operadores para cambio rápido de sesión con PIN de 4 dígitos y bitácora del sistema.
             </p>
         </div>
 
-        <button type="button" onclick="document.getElementById('modal-nuevo-usuario').classList.remove('hidden')"
-                class="px-4 py-2.5 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
-            + Nuevo Usuario
-        </button>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <button type="button" onclick="document.getElementById('modal-config-acceso-rapido').classList.remove('hidden')"
+                    class="px-4 py-2.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-[#1E40AF] text-xs font-bold shadow-2xs transition">
+                Configurar Cambio Rápido y PINs
+            </button>
+            <button type="button" onclick="document.getElementById('modal-nuevo-usuario').classList.remove('hidden')"
+                    class="px-4 py-2.5 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white text-xs font-bold shadow-sm transition">
+                + Nuevo Usuario
+            </button>
+        </div>
     </div>
 
     <!-- Tabla de Usuarios y Asignación de Cargos -->
     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-6 py-3.5 border-b border-slate-200 bg-slate-50/60 flex items-center justify-between">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600">
-                Personal Registrado
-            </h2>
+        <div class="px-6 py-3.5 border-b border-slate-200 bg-slate-50/60 flex flex-wrap items-center justify-between gap-2">
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Personal Registrado
+                </h2>
+                <p class="text-[11px] text-slate-400">
+                    Designa qué funcionarios aparecen en el acceso rápido lateral de cambio de turno (protegido por PIN de 4 dígitos).
+                </p>
+            </div>
             <span class="text-[11px] text-slate-400">{{ count($usuarios) }} cuentas registradas</span>
         </div>
 
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/40">
-                        <th class="py-3 px-5">ID</th>
-                        <th class="py-3 px-5">RUN</th>
-                        <th class="py-3 px-5">Nombre Completo</th>
-                        <th class="py-3 px-5">Correo Electrónico</th>
-                        <th class="py-3 px-5">Cargo / Perfil</th>
-                        <th class="py-3 px-5 text-center">Estado</th>
-                        <th class="py-3 px-5 text-center">Firma ISP</th>
-                        <th class="py-3 px-5 text-right">Acciones</th>
+                    <tr class="border-b border-slate-200 text-[11px] font-bold uppercase text-slate-400 bg-slate-50/40 whitespace-nowrap">
+                        <th class="py-3 px-4">ID</th>
+                        <th class="py-3 px-4">RUN</th>
+                        <th class="py-3 px-4">Nombre Completo</th>
+                        <th class="py-3 px-4">Correo Electrónico</th>
+                        <th class="py-3 px-4">Cargo / Perfil</th>
+                        <th class="py-3 px-4 text-center">Estado</th>
+                        <th class="py-3 px-4 text-center">Cambio Rápido (PIN)</th>
+                        <th class="py-3 px-4 text-center">Firma ISP</th>
+                        <th class="py-3 px-4 text-right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
                     @foreach($usuarios as $u)
                         <tr class="hover:bg-slate-50/80 {{ ! $u->activo ? 'bg-slate-50/60 opacity-75' : '' }}">
-                            <td class="py-3 px-5 font-mono-code text-slate-400">#{{ $u->id_usuario }}</td>
-                            <td class="py-3 px-5 font-mono-code font-bold text-slate-900">{{ $u->rut }}</td>
-                            <td class="py-3 px-5 font-semibold {{ $u->activo ? 'text-slate-800' : 'text-slate-400 line-through' }}">
+                            <td class="py-3 px-4 font-mono-code text-slate-400">#{{ $u->id_usuario }}</td>
+                            <td class="py-3 px-4 font-mono-code font-bold text-slate-900 whitespace-nowrap">{{ $u->rut }}</td>
+                            <td class="py-3 px-4 font-semibold {{ $u->activo ? 'text-slate-800' : 'text-slate-400 line-through' }}">
                                 {{ $u->nombre_completo }}
                             </td>
-                            <td class="py-3 px-5 text-slate-500">{{ $u->email }}</td>
-                            <td class="py-3 px-5">
+                            <td class="py-3 px-4 text-slate-500">{{ $u->email }}</td>
+                            <td class="py-3 px-4 whitespace-nowrap">
                                 <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-semibold text-[11px]">
                                     {{ $u->rol?->nombre_rol ?? 'Sin cargo' }}
                                 </span>
                             </td>
-                            <td class="py-3 px-5 text-center">
+                            <td class="py-3 px-4 text-center whitespace-nowrap">
                                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $u->activo ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700' }}">
                                     {{ $u->activo ? 'ACTIVO' : 'DESHABILITADO' }}
                                 </span>
                             </td>
-                            <td class="py-3 px-5 text-center text-[11px] font-mono-code text-slate-400">
+                            <td class="py-3 px-4 text-center whitespace-nowrap">
+                                @if($u->activo)
+                                    <form action="{{ route('usuarios.toggle_quick_access', $u->id_usuario) }}" method="POST" class="inline">
+                                        @csrf
+                                        @method('PATCH')
+                                        @if($u->acceso_rapido)
+                                            <button type="submit"
+                                                    title="Designado en el panel de Cambio Rápido (Haz clic para retirar)"
+                                                    class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 hover:bg-red-50 text-[#1E40AF] hover:text-red-700 border border-blue-200 hover:border-red-200 transition">
+                                                ✓ Designado (PIN 4d)
+                                            </button>
+                                        @else
+                                            <button type="submit"
+                                                    title="Haz clic para agregar a este funcionario al panel de Cambio Rápido de Usuario"
+                                                    class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-[#1E40AF] border border-slate-200 transition">
+                                                + Designar
+                                            </button>
+                                        @endif
+                                    </form>
+                                @else
+                                    <span class="text-[10px] text-slate-400">Inactivo</span>
+                                @endif
+                            </td>
+                            <td class="py-3 px-4 text-center text-[11px] font-mono-code text-slate-400 whitespace-nowrap">
                                 {{ $u->pin_qf ? '🔑 Habilitado Q.F.' : 'Estándar' }}
                             </td>
-                            <td class="py-3 px-5 text-right">
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center justify-end gap-1.5">
                                     <button type="button"
                                             onclick="openEditUserModal({{ json_encode([
@@ -75,6 +110,7 @@
                                                 'email' => $u->email,
                                                 'id_rol' => $u->id_rol,
                                                 'activo' => (bool) $u->activo,
+                                                'acceso_rapido' => (bool) $u->acceso_rapido,
                                                 'tiene_pin' => ! empty($u->pin_qf),
                                                 'update_url' => route('usuarios.update', $u->id_usuario),
                                             ]) }})"
@@ -121,7 +157,7 @@
                     📋 Registro de Actividad y Auditoría del Sistema
                 </h2>
                 <p class="text-[11px] text-slate-400">
-                    Historial de autorizaciones sanitarias, accesos y modificaciones administrativas.
+                    Historial de autorizaciones sanitarias, cambios de sesión con PIN y modificaciones administrativas.
                 </p>
             </div>
             <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-mono-code text-[11px]">
@@ -176,19 +212,94 @@
 
 </div>
 
+<!-- Modal Configurar Panel de Cambio Rápido de Usuario y PINs de 4 Dígitos -->
+<div id="modal-config-acceso-rapido" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden max-h-[92vh] flex flex-col">
+        <div class="bg-[#0F172A] text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="font-bold text-sm">Configurar Panel de Cambio Rápido de Usuario y PINs</h3>
+                <p class="text-[11px] text-slate-300">Designa qué funcionarios aparecen en el acceso rápido lateral y asigna su PIN de 4 dígitos</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-config-acceso-rapido').classList.add('hidden')" class="text-white">✕</button>
+        </div>
+
+        <form action="{{ route('usuarios.update_quick_access_list') }}" method="POST" class="p-5 space-y-4 text-xs overflow-y-auto">
+            @csrf
+            <div class="p-3 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 text-[11px]">
+                Marca los funcionarios que deseas habilitar en el bloque <strong>"Cambiar Usuario (PIN)"</strong> del menú lateral y de la pantalla de inicio. Para cambiar el PIN de 4 dígitos de un funcionario, escríbelo en su casilla correspondiente.
+            </div>
+
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-500">
+                            <th class="py-2.5 px-3 text-center">Incluir</th>
+                            <th class="py-2.5 px-3">Funcionario</th>
+                            <th class="py-2.5 px-3">Cargo / Rol</th>
+                            <th class="py-2.5 px-3">Nuevo PIN (4 dígitos)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($usuarios->where('activo', true) as $uActivo)
+                            <tr class="hover:bg-slate-50/80">
+                                <td class="py-2.5 px-3 text-center">
+                                    <input type="checkbox"
+                                           name="usuarios_acceso_ids[]"
+                                           value="{{ $uActivo->id_usuario }}"
+                                           {{ $uActivo->acceso_rapido ? 'checked' : '' }}
+                                           class="rounded border-slate-300 text-[#1E40AF] w-4 h-4 cursor-pointer">
+                                </td>
+                                <td class="py-2.5 px-3">
+                                    <div class="font-bold text-slate-900">{{ $uActivo->nombre_completo }}</div>
+                                    <div class="font-mono-code text-[10px] text-slate-400">{{ $uActivo->rut }}</div>
+                                </td>
+                                <td class="py-2.5 px-3">
+                                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px]">
+                                        {{ $uActivo->role_label }}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-3">
+                                    <input type="password"
+                                           name="pins_acceso[{{ $uActivo->id_usuario }}]"
+                                           inputmode="numeric"
+                                           minlength="4"
+                                           maxlength="4"
+                                           pattern="^[0-9]{4}$"
+                                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
+                                           placeholder="Mantener actual"
+                                           class="w-36 px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono-code text-center text-xs focus:border-[#1E40AF] outline-none">
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('modal-config-acceso-rapido').classList.add('hidden')"
+                        class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600">Cancelar</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white font-bold">
+                    Guardar Configuración y PINs
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Modal Nuevo Usuario -->
 <div id="modal-nuevo-usuario" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden max-h-[92vh] flex flex-col">
         <div class="bg-[#1E40AF] text-white px-5 py-4 flex items-center justify-between">
             <h3 class="font-bold text-sm">+ Nuevo Usuario</h3>
             <button type="button" onclick="document.getElementById('modal-nuevo-usuario').classList.add('hidden')" class="text-white">✕</button>
         </div>
-        <form action="{{ route('usuarios.store') }}" method="POST" class="p-5 space-y-3.5 text-xs">
+        <form action="{{ route('usuarios.store') }}" method="POST" class="p-5 space-y-3.5 text-xs overflow-y-auto">
             @csrf
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">RUN</label>
                     <input type="text" name="rut" placeholder="Ej: 18.455.120-K" required
+                           minlength="8" maxlength="12"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
@@ -202,23 +313,43 @@
                 </div>
             </div>
             <div>
-                <label class="block font-bold text-slate-700 mb-1">Nombre Completo</label>
+                <label class="block font-bold text-slate-700 mb-1">Nombre Completo (3 a 80 caracteres)</label>
                 <input type="text" name="nombre_completo" required placeholder="Ej: Dra. Camila Fuentes"
+                       minlength="3" maxlength="80"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300">
             </div>
             <div>
                 <label class="block font-bold text-slate-700 mb-1">Correo Electrónico</label>
                 <input type="email" name="email" required placeholder="camila.fuentes@farmanet.cl"
+                       minlength="5" maxlength="80"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300">
             </div>
-            <div>
-                <label class="block font-bold text-slate-700 mb-1">Contraseña</label>
-                <input type="password" name="password" value="Password123!" required
-                       class="w-full px-3 py-2 rounded-lg border border-slate-300">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Contraseña (8 a 32 caract.)</label>
+                    <input type="password" name="password" value="Password123!" required
+                           minlength="8" maxlength="32"
+                           class="w-full px-3 py-2 rounded-lg border border-slate-300">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">PIN Cambio Sesión (4 dígitos)</label>
+                    <input type="password" name="pin_acceso" value="1234" required
+                           inputmode="numeric" minlength="4" maxlength="4" pattern="^[0-9]{4}$"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
+                           class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code text-center font-bold">
+                </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="acceso_rapido" value="1" checked
+                           class="rounded border-slate-300 text-[#1E40AF] w-4 h-4">
+                    <span class="font-semibold text-slate-800">Designar en el panel de Cambio Rápido de Usuario</span>
+                </label>
             </div>
             <div id="contenedor-pin-qf" class="hidden p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas (Q.F.)</label>
-                <input type="password" id="input-pin-qf" name="pin_qf" placeholder="Ingrese PIN de 4 dígitos (ej: 4421)" disabled
+                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas (4 a 6 dígitos)</label>
+                <input type="password" id="input-pin-qf" name="pin_qf" placeholder="Ingrese PIN de 4 a 6 dígitos (ej: 4421)" disabled
+                       minlength="4" maxlength="6" pattern="^[0-9]{4,6}$"
                        class="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-white font-mono-code">
                 <p class="text-[11px] text-emerald-700">Requerido para autorizar la dispensación de recetas retenidas en el sistema.</p>
             </div>
@@ -233,18 +364,19 @@
 
 <!-- Modal Editar Usuario -->
 <div id="modal-editar-usuario" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-xl overflow-hidden max-h-[92vh] flex flex-col">
         <div class="bg-[#1E40AF] text-white px-5 py-4 flex items-center justify-between">
             <h3 class="font-bold text-sm">Editar Datos del Personal</h3>
             <button type="button" onclick="document.getElementById('modal-editar-usuario').classList.add('hidden')" class="text-white">✕</button>
         </div>
-        <form id="form-editar-usuario" method="POST" class="p-5 space-y-3.5 text-xs">
+        <form id="form-editar-usuario" method="POST" class="p-5 space-y-3.5 text-xs overflow-y-auto">
             @csrf
             @method('PUT')
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block font-bold text-slate-700 mb-1">RUN</label>
                     <input type="text" id="edit-rut" name="rut" required
+                           minlength="8" maxlength="12"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono-code">
                 </div>
                 <div>
@@ -258,13 +390,15 @@
                 </div>
             </div>
             <div>
-                <label class="block font-bold text-slate-700 mb-1">Nombre Completo</label>
+                <label class="block font-bold text-slate-700 mb-1">Nombre Completo (3 a 80 caracteres)</label>
                 <input type="text" id="edit-nombre-completo" name="nombre_completo" required
+                       minlength="3" maxlength="80"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300">
             </div>
             <div>
                 <label class="block font-bold text-slate-700 mb-1">Correo Electrónico</label>
                 <input type="email" id="edit-email" name="email" required
+                       minlength="5" maxlength="80"
                        class="w-full px-3 py-2 rounded-lg border border-slate-300">
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -277,14 +411,33 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 mb-1">Nueva Contraseña (Opcional)</label>
+                    <label class="block font-bold text-slate-700 mb-1">Nueva Contraseña (8 a 32 caract.)</label>
                     <input type="password" id="edit-password" name="password" placeholder="Dejar vacío para mantener"
+                           minlength="8" maxlength="32"
                            class="w-full px-3 py-2 rounded-lg border border-slate-300">
                 </div>
             </div>
+            <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-200 space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="font-bold text-slate-800">Cambio Rápido de Sesión en Terminal</label>
+                    <select id="edit-acceso-rapido" name="acceso_rapido" class="px-2.5 py-1 rounded-lg border border-blue-300 bg-white font-semibold text-slate-800">
+                        <option value="1">✓ Designado en panel lateral</option>
+                        <option value="0">No incluido</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nuevo PIN de Cambio de Sesión (4 dígitos)</label>
+                    <input type="password" id="edit-pin-acceso" name="pin_acceso"
+                           inputmode="numeric" minlength="4" maxlength="4" pattern="^[0-9]{4}$"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
+                           placeholder="Dejar vacío para mantener PIN actual"
+                           class="w-full px-3 py-1.5 rounded-lg border border-blue-300 bg-white font-mono-code">
+                </div>
+            </div>
             <div id="edit-contenedor-pin-qf" class="hidden p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
-                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas (Q.F.)</label>
+                <label class="block font-bold text-emerald-900">PIN de Autorización de Recetas (4 a 6 dígitos)</label>
                 <input type="password" id="edit-input-pin-qf" name="pin_qf" placeholder="Ingrese nuevo PIN o deje vacío para mantener actual" disabled
+                       minlength="4" maxlength="6" pattern="^[0-9]{4,6}$"
                        class="w-full px-3 py-2 rounded-lg border border-emerald-300 bg-white font-mono-code">
                 <p id="edit-ayuda-pin-qf" class="text-[11px] text-emerald-700">Requerido para autorizar la dispensación de recetas retenidas en el sistema.</p>
             </div>
@@ -332,7 +485,9 @@
         document.getElementById('edit-email').value = user.email || '';
         document.getElementById('edit-id-rol').value = user.id_rol;
         document.getElementById('edit-activo').value = user.activo ? '1' : '0';
+        document.getElementById('edit-acceso-rapido').value = user.acceso_rapido ? '1' : '0';
         document.getElementById('edit-password').value = '';
+        document.getElementById('edit-pin-acceso').value = '';
         document.getElementById('edit-input-pin-qf').value = '';
 
         editUserHasExistingPin = Boolean(user.tiene_pin);
@@ -371,6 +526,12 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', togglePinQfField);
+    document.addEventListener('DOMContentLoaded', function() {
+        togglePinQfField();
+        @if(request()->boolean('config_acceso'))
+            const modalConfig = document.getElementById('modal-config-acceso-rapido');
+            if (modalConfig) modalConfig.classList.remove('hidden');
+        @endif
+    });
 </script>
 @endsection

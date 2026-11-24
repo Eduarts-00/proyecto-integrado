@@ -606,4 +606,65 @@ class ExampleTest extends TestCase
         $dashResp->assertSee('LOT-COMPRA-777');
         $dashResp->assertSee(number_format($ventasDespues, 0, ',', '.'));
     }
+
+    /**
+     * Cambio Rápido de Usuario con PIN de 4 Dígitos y Designación por Administrador:
+     * 1. Intento de cambio de sesión sin PIN o con PIN erróneo es rechazado y mantiene la sesión actual.
+     * 2. Cambio de sesión con PIN válido de 4 dígitos (1234) cambia el turno exitosamente.
+     * 3. El Administrador puede designar o retirar funcionarios del panel de Cambio Rápido y actualizar sus PINs.
+     * 4. Un funcionario retirado del Cambio Rápido no puede ser seleccionado mediante quickLogin.
+     */
+    public function test_cambio_rapido_de_usuario_exige_pin_4_digitos_y_es_configurable_por_admin(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $admin = User::where('rut', '10.111.222-3')->firstOrFail();
+        $vendedor = User::where('rut', '12.345.678-5')->firstOrFail();
+        $bodeguero = User::where('rut', '15.432.876-5')->firstOrFail();
+
+        // 1. Intento de cambio de sesión con PIN incorrecto -> bloqueado
+        $badPinResp = $this->actingAs($admin)
+            ->from(route('dashboard.index'))
+            ->post(route('login.demo', $vendedor->id_usuario), [
+                'pin_acceso' => '9999',
+            ]);
+        $badPinResp->assertRedirect(route('dashboard.index'));
+        $badPinResp->assertSessionHas('error');
+        $this->assertEquals($admin->id_usuario, auth()->id());
+
+        // 2. Cambio de sesión con PIN de 4 dígitos correcto (1234) -> inicia sesión como Vendedor
+        $okPinResp = $this->actingAs($admin)->post(route('login.demo', $vendedor->id_usuario), [
+            'pin_acceso' => '1234',
+        ]);
+        $okPinResp->assertRedirect(route('pos.index'));
+        $this->assertEquals($vendedor->id_usuario, auth()->id());
+
+        // 3. El Administrador retira al Bodeguero del panel de Cambio Rápido y cambia el PIN del Vendedor a 7788
+        $configResp = $this->actingAs($admin)->post(route('usuarios.update_quick_access_list'), [
+            'usuarios_acceso_ids' => [$admin->id_usuario, $vendedor->id_usuario],
+            'pins_acceso' => [
+                $vendedor->id_usuario => '7788',
+            ],
+        ]);
+        $configResp->assertRedirect(route('usuarios.index'));
+
+        $this->assertFalse($bodeguero->fresh()->acceso_rapido);
+        $this->assertTrue($vendedor->fresh()->acceso_rapido);
+
+        // 4. Intentar cambio rápido hacia el Bodeguero (no designado) -> rechazado
+        $blockedResp = $this->actingAs($admin)
+            ->from(route('dashboard.index'))
+            ->post(route('login.demo', $bodeguero->id_usuario), [
+                'pin_acceso' => '1234',
+            ]);
+        $blockedResp->assertSessionHas('error');
+        $this->assertEquals($admin->id_usuario, auth()->id());
+
+        // 5. Cambiar al Vendedor con su nuevo PIN personalizado (7788) -> exitoso
+        $newPinResp = $this->actingAs($admin)->post(route('login.demo', $vendedor->id_usuario), [
+            'pin_acceso' => '7788',
+        ]);
+        $newPinResp->assertRedirect(route('pos.index'));
+        $this->assertEquals($vendedor->id_usuario, auth()->id());
+    }
 }

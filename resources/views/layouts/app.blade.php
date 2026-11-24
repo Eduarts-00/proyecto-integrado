@@ -26,6 +26,11 @@
         $currentUser = auth()->user();
         $role = $currentUser?->role ?? 'vendedor';
         $pendingIspCount = \App\Models\IspLog::where('estado', 'PENDIENTE')->count();
+        $quickSwitchUsers = \App\Models\User::with('rol')
+            ->where('activo', true)
+            ->where('acceso_rapido', true)
+            ->orderBy('id_usuario', 'asc')
+            ->get();
 
         $badgeColors = [
             'vendedor' => 'bg-blue-600/30 text-blue-300 border-blue-400/30',
@@ -151,35 +156,48 @@
             </div>
         </div>
 
-        <!-- Cambio de Perfil & Cierre de Sesión -->
+        <!-- Cambio Rápido de Usuario (Protegido por PIN de 4 dígitos y Configurable por Admin) -->
         <div class="p-4 border-t border-slate-800 text-xs space-y-3">
             <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                <p class="text-[10px] font-semibold uppercase text-slate-400 mb-1.5">Cambiar Perfil</p>
-                <div class="grid grid-cols-2 gap-1">
-                    <form action="{{ route('login.demo', 'vendedor') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-2 py-1 rounded text-[10px] {{ $role === 'vendedor' ? 'bg-blue-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
-                            Vendedor
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-[10px] font-semibold uppercase text-slate-400">Cambiar Usuario (PIN)</p>
+                    @if($role === 'administrador')
+                        <a href="{{ route('usuarios.index', ['config_acceso' => 1]) }}"
+                           class="text-[10px] font-bold text-blue-400 hover:text-blue-300 hover:underline"
+                           title="Designar qué usuarios aparecen aquí y configurar sus PINs">
+                            Editar
+                        </a>
+                    @endif
+                </div>
+                <div class="space-y-1 max-h-40 overflow-y-auto pr-0.5">
+                    @php
+                        $roleActiveColors = [
+                            'vendedor' => 'bg-blue-600 text-white font-semibold',
+                            'quimico_farmaceutico' => 'bg-emerald-600 text-white font-semibold',
+                            'bodeguero' => 'bg-amber-600 text-white font-semibold',
+                            'administrador' => 'bg-purple-600 text-white font-semibold',
+                        ];
+                    @endphp
+                    @forelse($quickSwitchUsers as $qUser)
+                        @php
+                            $isCurrent = $currentUser && $currentUser->id_usuario === $qUser->id_usuario;
+                            $qRole = $qUser->role;
+                        @endphp
+                        <button type="button"
+                                onclick="openQuickSwitchPinModal({{ json_encode([
+                                    'id_usuario' => $qUser->id_usuario,
+                                    'nombre_completo' => $qUser->nombre_completo,
+                                    'rut' => $qUser->rut,
+                                    'role_label' => $qUser->role_label,
+                                    'action_url' => route('login.demo', $qUser->id_usuario),
+                                ]) }})"
+                                class="w-full text-left px-2.5 py-1.5 rounded text-[10px] flex items-center justify-between gap-1.5 transition {{ $isCurrent ? ($roleActiveColors[$qRole] ?? 'bg-blue-600 text-white font-semibold') : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
+                            <span class="truncate">{{ $qUser->nombre_completo }}</span>
+                            <span class="text-[9px] opacity-80 shrink-0">{{ $qUser->role_label }}</span>
                         </button>
-                    </form>
-                    <form action="{{ route('login.demo', 'quimico_farmaceutico') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-2 py-1 rounded text-[10px] {{ $role === 'quimico_farmaceutico' ? 'bg-emerald-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
-                            Q. Farmacéutico
-                        </button>
-                    </form>
-                    <form action="{{ route('login.demo', 'bodeguero') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-2 py-1 rounded text-[10px] {{ $role === 'bodeguero' ? 'bg-amber-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
-                            Bodeguero
-                        </button>
-                    </form>
-                    <form action="{{ route('login.demo', 'administrador') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="w-full text-left px-2 py-1 rounded text-[10px] {{ $role === 'administrador' ? 'bg-purple-600 text-white font-semibold' : 'bg-slate-800 text-slate-300 hover:bg-slate-700' }}">
-                            Administrador
-                        </button>
-                    </form>
+                    @empty
+                        <p class="text-[10px] text-slate-500 py-1">Sin operadores designados.</p>
+                    @endforelse
                 </div>
             </div>
 
@@ -259,7 +277,89 @@
         </main>
     </div>
 
+    <!-- Modal de Cambio Rápido de Sesión con PIN de 4 Dígitos -->
+    <div id="modal-cambio-sesion-pin" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full border border-slate-200 shadow-2xl overflow-hidden">
+            <div class="bg-[#0F172A] text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-sm">Cambio de Sesión / Turno</h3>
+                    <p class="text-[11px] text-slate-400">Verificación de seguridad con PIN de 4 dígitos</p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-cambio-sesion-pin').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold">✕</button>
+            </div>
+            <form id="form-cambio-sesion-pin" method="POST" class="p-5 space-y-4 text-xs">
+                @csrf
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+                    <div id="switch-pin-avatar" class="w-10 h-10 rounded-full bg-[#1E40AF] text-white font-extrabold text-sm flex items-center justify-center uppercase shrink-0">
+                        U
+                    </div>
+                    <div class="min-w-0">
+                        <div id="switch-pin-nombre" class="font-bold text-slate-900 text-sm truncate">Funcionario</div>
+                        <div class="text-[11px] text-slate-500">
+                            <span id="switch-pin-rol" class="font-semibold text-[#1E40AF]">Cargo</span> •
+                            <span id="switch-pin-rut" class="font-mono-code">RUN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="input-switch-pin-acceso" class="block font-bold text-slate-700 mb-1.5 text-center">
+                        Ingrese su PIN de 4 dígitos
+                    </label>
+                    <input type="password"
+                           id="input-switch-pin-acceso"
+                           name="pin_acceso"
+                           inputmode="numeric"
+                           minlength="4"
+                           maxlength="4"
+                           pattern="^[0-9]{4}$"
+                           required
+                           autocomplete="off"
+                           placeholder="••••"
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4)"
+                           class="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-[#1E40AF] font-mono-code font-extrabold text-xl tracking-[0.5em] text-center text-slate-900 outline-none">
+                    <p class="text-[10px] text-slate-400 text-center mt-1.5">
+                        PIN de terminal de 4 dígitos (Por defecto inicial: <strong class="font-mono-code text-slate-600">1234</strong>)
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-1">
+                    <button type="button"
+                            onclick="document.getElementById('modal-cambio-sesion-pin').classList.add('hidden')"
+                            class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 font-semibold">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg bg-[#1E40AF] hover:bg-blue-800 text-white font-bold shadow-sm transition">
+                        Confirmar Cambio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        function openQuickSwitchPinModal(user) {
+            const modal = document.getElementById('modal-cambio-sesion-pin');
+            const form = document.getElementById('form-cambio-sesion-pin');
+            const pinInput = document.getElementById('input-switch-pin-acceso');
+            if (!modal || !form) return;
+
+            form.action = user.action_url;
+            document.getElementById('switch-pin-nombre').textContent = user.nombre_completo || '';
+            document.getElementById('switch-pin-rol').textContent = user.role_label || '';
+            document.getElementById('switch-pin-rut').textContent = user.rut || '';
+            document.getElementById('switch-pin-avatar').textContent = (user.nombre_completo || 'U').charAt(0).toUpperCase();
+
+            if (pinInput) {
+                pinInput.value = '';
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                if (pinInput) pinInput.focus();
+            }, 60);
+        }
+
         setInterval(() => {
             const el = document.getElementById('live-clock');
             if (el) {

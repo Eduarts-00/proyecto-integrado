@@ -20,9 +20,15 @@ class AuthController extends Controller
             return $this->redirectByRole(Auth::user());
         }
 
-        $demoUsers = User::with('rol')->where('activo', true)->get()->keyBy(fn (User $u) => $u->role);
+        $quickAccessUsers = User::with('rol')
+            ->where('activo', true)
+            ->where('acceso_rapido', true)
+            ->orderBy('id_usuario', 'asc')
+            ->get();
 
-        return view('auth.login', compact('demoUsers'));
+        $demoUsers = $quickAccessUsers->keyBy(fn (User $u) => $u->role);
+
+        return view('auth.login', compact('demoUsers', 'quickAccessUsers'));
     }
 
     public function login(Request $request): RedirectResponse
@@ -64,24 +70,64 @@ class AuthController extends Controller
     }
 
     /**
-     * Acceso Rápido por Rol para demostración académica (Capítulo 5.1 - Pantalla 1).
+     * Cambio Rápido de Operador / Turno validado con PIN de 4 dígitos.
+     * Acepta tanto el ID del usuario designado por el Administrador como el código de rol.
      */
     public function quickLogin(Request $request, string $role): RedirectResponse
     {
-        $user = User::with('rol')
-            ->whereHas('rol', fn ($q) => $q->where('codigo_rol', $role))
+        $data = $request->validate([
+            'pin_acceso' => ['required', 'string', 'size:4', 'regex:/^[0-9]{4}$/'],
+        ], [
+            'pin_acceso.required' => 'Debe ingresar el PIN de 4 dígitos para cambiar de sesión.',
+            'pin_acceso.size' => 'El PIN de cambio de sesión debe tener exactamente 4 dígitos.',
+            'pin_acceso.regex' => 'El PIN de cambio de sesión solo debe contener 4 números.',
+        ]);
+
+        $query = User::with('rol')
             ->where('activo', true)
-            ->firstOrFail();
+            ->where('acceso_rapido', true);
+
+        if (ctype_digit($role)) {
+            $user = $query->where('id_usuario', (int) $role)->first();
+        } else {
+            $user = $query->whereHas('rol', fn ($q) => $q->where('codigo_rol', $role))->first();
+        }
+
+        if (! $user) {
+            return back()->with('error', 'El funcionario seleccionado no está designado en el panel de cambio rápido de sesión.');
+        }
+
+        $pinInput = $data['pin_acceso'];
+        $pinValido = ($user->pin_acceso && Hash::check($pinInput, $user->pin_acceso))
+            || ($user->pin_qf && Hash::check($pinInput, $user->pin_qf));
+
+        if (! $pinValido) {
+            $this->auditLogService->recordSecurityEvent('CAMBIO_SESION_PIN_INVALIDO', [
+                'usuario_destino' => $user->nombre_completo,
+                'rut_destino' => $user->rut,
+                'rol_destino' => $user->role,
+            ], Auth::user() ?? $user);
+
+            if (! Auth::check()) {
+                return back()->withErrors([
+                    'rut' => "PIN de 4 dígitos incorrecto para acceder como {$user->nombre_completo}.",
+                ]);
+            }
+
+            return back()->with('error', "PIN de 4 dígitos incorrecto para cambiar a la sesión de {$user->nombre_completo}.");
+        }
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        $this->auditLogService->recordSecurityEvent('ACCESO_RAPIDO_DEMO_ROL', [
+        $this->auditLogService->recordSecurityEvent('CAMBIO_SESION_TURNO_PIN', [
             'rol' => $user->role,
             'usuario' => $user->nombre_completo,
+            'rut' => $user->rut,
         ], $user);
 
-        return $this->redirectByRole($user);
+        return $this->redirectByRole($user)
+            ->with('success', "Sesión iniciada como {$user->nombre_completo} ({$user->role_label}).");
     }
 
     public function validateMFA(Request $request)
